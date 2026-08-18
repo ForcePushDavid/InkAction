@@ -16,6 +16,7 @@ data class SavedNote(
     val summary: String,
     val markdown: String,
     val tags: List<String> = emptyList(),
+    val strokes: List<com.inkaction.app.ui.canvas.InkStroke> = emptyList(),
     val timestamp: Long = System.currentTimeMillis()
 )
 
@@ -63,13 +64,14 @@ class NoteStorageManager(private val context: Context) {
         }
     }
 
-    suspend fun saveNote(title: String, summary: String, markdown: String, tags: List<String>): Long = withContext(Dispatchers.IO) {
+    suspend fun saveNote(title: String, summary: String, markdown: String, tags: List<String>, strokes: List<com.inkaction.app.ui.canvas.InkStroke>): Long = withContext(Dispatchers.IO) {
         val note = SavedNote(
             id = System.currentTimeMillis(),
             title = title,
             summary = summary,
             markdown = markdown,
-            tags = tags
+            tags = tags,
+            strokes = strokes
         )
         val currentList = _notesFlow.value.toMutableList()
         currentList.add(0, note)

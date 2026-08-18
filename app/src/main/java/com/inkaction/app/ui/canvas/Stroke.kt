@@ -2,6 +2,7 @@ package com.inkaction.app.ui.canvas
 
 import android.graphics.Color
 import android.graphics.Path
+import kotlin.jvm.Transient
 
 enum class ToolType {
     PEN,
@@ -22,6 +23,7 @@ data class InkStroke(
     val color: Int = Color.parseColor("#F0F6FC"),
     val baseWidth: Float = 6f
 ) {
+    @Transient
     val path: Path = Path()
 
     fun buildPath() {

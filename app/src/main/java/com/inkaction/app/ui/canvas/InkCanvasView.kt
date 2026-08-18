@@ -18,9 +18,17 @@ class InkCanvasView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    private val strokes = mutableListOf<InkStroke>()
+    val strokes = mutableListOf<InkStroke>()
     private val undoStack = Stack<InkStroke>()
     private var currentStroke: InkStroke? = null
+
+    fun loadStrokes(newStrokes: List<InkStroke>) {
+        strokes.clear()
+        strokes.addAll(newStrokes)
+        strokes.forEach { it.buildPath() }
+        undoStack.clear()
+        invalidate()
+    }
 
     var currentTool: ToolType = ToolType.PEN
     var currentColor: Int = Color.parseColor("#F0F6FC")
@@ -71,50 +79,85 @@ class InkCanvasView @JvmOverloads constructor(
         } else {
             currentTool
         }
+        
+        val eraserRadius = 30f
+        
+        fun eraseIntersections(touchX: Float, touchY: Float): Boolean {
+            var erased = false
+            val toRemove = strokes.filter { stroke ->
+                stroke.points.any { p ->
+                    Math.hypot((p.x - touchX).toDouble(), (p.y - touchY).toDouble()) < eraserRadius
+                }
+            }
+            if (toRemove.isNotEmpty()) {
+                strokes.removeAll(toRemove.toSet())
+                toRemove.forEach { undoStack.push(it) }
+                erased = true
+            }
+            return erased
+        }
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 onStrokeStarted?.invoke()
-                val stroke = InkStroke(
-                    tool = effectiveTool,
-                    color = currentColor,
-                    baseWidth = currentSize
-                )
-                stroke.points.add(InkPoint(x, y, pressure))
-                stroke.buildPath()
-                currentStroke = stroke
-                strokes.add(stroke)
-                undoStack.clear()
-                invalidate()
-                return true
-            }
-
-            MotionEvent.ACTION_MOVE -> {
-                currentStroke?.let { stroke ->
-                    val historySize = event.historySize
-                    for (h in 0 until historySize) {
-                        stroke.points.add(
-                            InkPoint(
-                                event.getHistoricalX(h),
-                                event.getHistoricalY(h),
-                                event.getHistoricalPressure(h)
-                            )
-                        )
-                    }
+                if (effectiveTool == ToolType.ERASER) {
+                    if (eraseIntersections(x, y)) invalidate()
+                } else {
+                    val stroke = InkStroke(
+                        tool = effectiveTool,
+                        color = currentColor,
+                        baseWidth = currentSize
+                    )
                     stroke.points.add(InkPoint(x, y, pressure))
                     stroke.buildPath()
+                    currentStroke = stroke
+                    strokes.add(stroke)
+                    undoStack.clear()
                     invalidate()
                 }
                 return true
             }
 
+            MotionEvent.ACTION_MOVE -> {
+                if (effectiveTool == ToolType.ERASER) {
+                    val historySize = event.historySize
+                    var erased = false
+                    for (h in 0 until historySize) {
+                        if (eraseIntersections(event.getHistoricalX(h), event.getHistoricalY(h))) erased = true
+                    }
+                    if (eraseIntersections(x, y)) erased = true
+                    if (erased) invalidate()
+                } else {
+                    currentStroke?.let { stroke ->
+                        val historySize = event.historySize
+                        for (h in 0 until historySize) {
+                            stroke.points.add(
+                                InkPoint(
+                                    event.getHistoricalX(h),
+                                    event.getHistoricalY(h),
+                                    event.getHistoricalPressure(h)
+                                )
+                            )
+                        }
+                        stroke.points.add(InkPoint(x, y, pressure))
+                        stroke.buildPath()
+                        invalidate()
+                    }
+                }
+                return true
+            }
+
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                currentStroke?.let { stroke ->
-                    stroke.points.add(InkPoint(x, y, pressure))
-                    stroke.buildPath()
-                    currentStroke = null
-                    invalidate()
+                if (effectiveTool == ToolType.ERASER) {
                     onStrokeFinished?.invoke(strokes.size)
+                } else {
+                    currentStroke?.let { stroke ->
+                        stroke.points.add(InkPoint(x, y, pressure))
+                        stroke.buildPath()
+                        currentStroke = null
+                        invalidate()
+                        onStrokeFinished?.invoke(strokes.size)
+                    }
                 }
                 return true
             }

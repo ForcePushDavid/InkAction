@@ -296,8 +296,11 @@ fun CanvasPaneContent(
         AndroidView(
             factory = { context ->
                 InkCanvasView(context).apply {
+                    this.loadStrokes(viewModel.currentStrokes)
                     this.onStrokeStarted = { viewModel.onStrokeStarted() }
                     this.onStrokeFinished = { count ->
+                        viewModel.currentStrokes.clear()
+                        viewModel.currentStrokes.addAll(this.strokes)
                         viewModel.onStrokeFinished(count) { createOcrBitmap() }
                     }
                     canvasViewRef = this
@@ -333,17 +336,36 @@ fun CanvasPaneContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Button(
-                onClick = { viewModel.triggerActionize(canvasViewRef?.createOcrBitmap()) },
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                onClick = { 
+                    if (!autoPushState.isProcessing) {
+                        viewModel.triggerActionize(
+                            bitmap = canvasViewRef?.createOcrBitmap(),
+                            strokes = canvasViewRef?.strokes?.toList() ?: emptyList()
+                        ) 
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (autoPushState.isProcessing) AccentBlue.copy(alpha = 0.5f) else AccentBlue
+                ),
                 shape = CircleShape
             ) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "Actionize", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                if (autoPushState.isProcessing) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Zpracovávám...", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Actionize", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

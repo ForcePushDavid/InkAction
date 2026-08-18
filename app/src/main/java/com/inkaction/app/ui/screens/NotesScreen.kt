@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -117,20 +118,39 @@ fun NotesScreen(
                     )
                 }
 
-                IconButton(
-                    onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip = ClipData.newPlainText("Synthesized Note", "# ${note.title}\n\n${note.summary}\n\n${note.markdown}")
-                        clipboard.setPrimaryClip(clip)
-                        Toast.makeText(context, "Note copied to clipboard!", Toast.LENGTH_SHORT).show()
+                Row {
+                    IconButton(
+                        onClick = {
+                            com.inkaction.app.util.PdfExportUtil.exportNoteToPdf(
+                                context,
+                                note.title,
+                                "${note.summary}\n\n${note.markdown}"
+                            )
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Print,
+                            contentDescription = "Export to PDF",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy Note",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
+
+                    IconButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("Synthesized Note", "# ${note.title}\n\n${note.summary}\n\n${note.markdown}")
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(context, "Note copied to clipboard!", Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = "Copy Note",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
 

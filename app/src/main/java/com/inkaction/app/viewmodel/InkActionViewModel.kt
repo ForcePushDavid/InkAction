@@ -44,6 +44,9 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     private val _autoPushState = MutableStateFlow(AutoPushUiState())
     val autoPushState: StateFlow<AutoPushUiState> = _autoPushState.asStateFlow()
 
+    // Persist canvas strokes in ViewModel so they survive tab switches
+    val currentStrokes = mutableListOf<com.inkaction.app.ui.canvas.InkStroke>()
+
     private val _pipelineStatus = MutableStateFlow<AgentPipelineStatus>(AgentPipelineStatus.Idle)
     val pipelineStatus: StateFlow<AgentPipelineStatus> = _pipelineStatus.asStateFlow()
 
@@ -140,7 +143,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun triggerActionize(bitmap: Bitmap?) {
+    fun triggerActionize(bitmap: Bitmap?, strokes: List<com.inkaction.app.ui.canvas.InkStroke> = emptyList()) {
         cancelCountdown()
         if (bitmap == null) return
 
@@ -163,7 +166,8 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                             title = note.title,
                             summary = note.summary,
                             markdown = note.markdown,
-                            tags = note.tags
+                            tags = note.tags,
+                            strokes = strokes
                         )
                     }
                     if (res.todos.isNotEmpty()) {
