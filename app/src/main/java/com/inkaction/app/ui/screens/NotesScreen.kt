@@ -471,15 +471,6 @@ fun SavedNoteCard(
                     }
                 }
                 
-                if (savedNote.aiEnhancement == null) {
-                    if (isEnhancing) {
-                        androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AccentPurple)
-                    } else {
-                        androidx.compose.material3.TextButton(onClick = onEnhance) {
-                            Text("✨ AI Enhance", color = AccentPurple)
-                        }
-                    }
-                }
                 IconButton(onClick = onTogglePin, modifier = Modifier.size(36.dp)) {
                     Icon(
                         imageVector = if (savedNote.isPinned) Icons.Default.PushPin else Icons.Outlined.PushPin, 
@@ -549,6 +540,30 @@ fun SavedNoteCard(
             }
         }
 
+        // AI Enhance button - below content, not in header
+        if (savedNote.aiEnhancement == null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                if (isEnhancing) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(18.dp), color = AccentPurple, strokeWidth = 2.dp)
+                        Text("Analyzuji...", color = AccentPurple, fontSize = 12.sp)
+                    }
+                } else {
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = onEnhance,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, AccentPurple),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentPurple)
+                    ) {
+                        Text("\u2728 AI Enhance", fontSize = 13.sp)
+                    }
+                }
+            }
+        }
+
         if (savedNote.aiEnhancement != null) {
             Spacer(modifier = Modifier.height(16.dp))
             Box(
@@ -560,7 +575,7 @@ fun SavedNoteCard(
                     .padding(12.dp)
             ) {
                 Column {
-                    Text("✨ AI Insight", color = AccentPurple, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("\u2728 AI Insight", color = AccentPurple, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = savedNote.aiEnhancement,

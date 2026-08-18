@@ -95,88 +95,87 @@ class GeminiAgentEngine(
         return clean.trim()
     }
 
+    private var mockIndex = 0
+
     private suspend fun runMockPipeline(): AgentPipelineStatus {
         delay(600)
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val cal = Calendar.getInstance()
-        
         cal.add(Calendar.DAY_OF_YEAR, 1)
         val tomorrow = dateFormat.format(cal.time)
-        
         cal.add(Calendar.DAY_OF_YEAR, 6)
         val nextWeek = dateFormat.format(cal.time)
 
-        val mockResponse = AgentResponse(
-            note = NoteDto(
-                title = "Galaxy Tab S9 & S-Pen Architecture",
-                summary = "Synthesized handwritten diagram into specifications, deliverables, and sprint review.",
-                markdown = """
-### S-Pen Multimodal Architecture
-* **Low-latency Drawing**: Dynamic pressure scaling and Catmull-Rom smoothing.
-* **Palm Rejection**: Rejects finger touches when S-Pen stylus is active.
-* **Inactivity Auto-Push**: Automatically deploys 4 agents when idle for 6 seconds.
+        val currentIndex = mockIndex++ % 4
 
-### Strategic Goals
-1. Zero re-reading needed: Instant conversion to organized notes.
-2. Direct sync to Android Calendar & Room Todo checklist.
-3. Clean adaptive UI across Tab S9 and S26 Ultra.
-                """.trimIndent(),
-                tags = listOf("SPen", "GalaxyTabS9", "S26Ultra", "Architecture", "Gemini")
-            ),
-            todos = listOf(
-                TodoDto(
-                    id = "todo-1",
-                    text = "Test S-Pen barrel button eraser toggle on Tab S9",
-                    priority = "high",
-                    dueDate = tomorrow,
-                    completed = false
+        val mockResponse = when (currentIndex) {
+            0 -> AgentResponse(
+                note = NoteDto(
+                    title = "Brainstorm: Produktova strategie Q3",
+                    summary = "Shrnuti klicovych bodu z brainstormingu o produktove strategii.",
+                    markdown = "### Klicove body\n* **Cilova skupina**: Studenti a kreativci\n* **Konkurencni vyhoda**: AI rozpoznavani rukopisu v realnem case\n* **Dalsi kroky**: Pripravit MVP pro beta testery\n\n### Napady\n1. Integrace s Google Calendar\n2. Export do PDF jednim klikem\n3. Sdileni poznamek pres QR kod",
+                    tags = listOf("Strategie", "Produkt", "Q3", "Brainstorm")
                 ),
-                TodoDto(
-                    id = "todo-2",
-                    text = "Configure Gemini API key in Android Settings dialog",
-                    priority = "high",
-                    dueDate = "Today",
-                    completed = false
+                todos = listOf(
+                    TodoDto("todo-1", "Pripravit prezentaci pro investory", "high", tomorrow, false),
+                    TodoDto("todo-2", "Kontaktovat beta testery", "medium", nextWeek, false)
                 ),
-                TodoDto(
-                    id = "todo-3",
-                    text = "Review Android Calendar sync permission flow",
-                    priority = "medium",
-                    dueDate = nextWeek,
-                    completed = false
-                )
-            ),
-            events = listOf(
-                EventDto(
-                    id = "event-1",
-                    title = "InkAction S-Pen Demo & Review",
-                    date = tomorrow,
-                    time = "14:00",
-                    duration = "45m",
-                    description = "Live demo of handwritten ink to calendar automation on Galaxy Tab S9.",
-                    location = "Google Meet"
+                events = listOf(
+                    EventDto("event-1", "Produktovy review", tomorrow, "10:00", "1h", "Revize produktove strategie s tymem.", "Kancelar")
                 ),
-                EventDto(
-                    id = "event-2",
-                    title = "Sprint Retrospective",
-                    date = nextWeek,
-                    time = "16:30",
-                    duration = "1h",
-                    description = "Sprint retrospective and Galaxy S26 Ultra testing.",
-                    location = "Main Workspace"
-                )
-            ),
-            topics = listOf(
-                TopicDto(
-                    name = "S-Pen Engine",
-                    summary = "Hardware-accelerated canvas with pressure sensitivity."
-                ),
-                TopicDto(
-                    name = "Google Gemini Pipeline",
-                    summary = "Multimodal AI for handwriting transcription, action items & scheduling."
-                )
+                topics = listOf(TopicDto("Produktova strategie", "Planovani smeru produktu pro dalsi kvartal."))
             )
-        )
+            1 -> AgentResponse(
+                note = NoteDto(
+                    title = "Poznamky z prednasky: Strojove uceni",
+                    summary = "Klicove koncepty z prednasky o zakladech strojoveho uceni.",
+                    markdown = "### Zaklady ML\n* **Supervised Learning**: Uceni s oznacenymi daty\n* **Unsupervised Learning**: Hledani vzoru v neoznacenych datech\n* **Neural Networks**: Vrstvy neuronu inspirovane mozkem\n\n### Dulezite vzorce\n- Loss function: Meri chybu modelu\n- Gradient descent: Optimalizace vah\n- Overfitting vs Underfitting",
+                    tags = listOf("ML", "AI", "Prednaska", "Uceni")
+                ),
+                todos = listOf(
+                    TodoDto("todo-1", "Procvicit gradient descent na prikladu", "high", tomorrow, false),
+                    TodoDto("todo-2", "Precist kapitolu 5 z ucebnice ML", "medium", nextWeek, false),
+                    TodoDto("todo-3", "Napsat shrnuti pro studijni skupinu", "low", nextWeek, false)
+                ),
+                events = listOf(
+                    EventDto("event-1", "Dalsi prednaska ML", nextWeek, "09:00", "2h", "Pokrocile neuronove site a CNN.", "Aula B3")
+                ),
+                topics = listOf(TopicDto("Strojove uceni", "Zaklady supervised a unsupervised learningu."))
+            )
+            2 -> AgentResponse(
+                note = NoteDto(
+                    title = "Nakupni seznam & Vikendovy plan",
+                    summary = "Seznam nakupu a plan aktivit na vikend.",
+                    markdown = "### Nakup\n* Chleba, maslo, syr\n* Rajcata, okurky, paprika\n* Kava a caj\n* Cistici prostredky\n\n### Vikendovy plan\n1. **Sobota rano**: Behani v parku (5 km)\n2. **Sobota odpoledne**: Vareni obeda, uprava bytu\n3. **Nedele**: Vylet na hrad + kafe s kamarady",
+                    tags = listOf("Nakup", "Vikend", "Plan", "Osobni")
+                ),
+                todos = listOf(
+                    TodoDto("todo-1", "Nakoupit potraviny", "high", tomorrow, false),
+                    TodoDto("todo-2", "Rezervovat stul v restauraci", "medium", tomorrow, false)
+                ),
+                events = listOf(
+                    EventDto("event-1", "Behani v parku", tomorrow, "08:00", "45m", "Ranni beh 5km v mestskem parku.", "Mestsky park")
+                ),
+                topics = listOf(TopicDto("Vikendovy plan", "Organizace volneho casu a nakupu."))
+            )
+            else -> AgentResponse(
+                note = NoteDto(
+                    title = "API Design Meeting Notes",
+                    summary = "Key decisions from REST API architecture meeting.",
+                    markdown = "### API Architecture\n* **Auth**: OAuth 2.0 with JWT refresh tokens\n* **Versioning**: URL-based (/v1/, /v2/)\n* **Rate limiting**: 100 req/min per user\n\n### Endpoints\n1. `POST /api/v1/notes` - Create note\n2. `GET /api/v1/notes/:id` - Get note\n3. `PUT /api/v1/notes/:id/enhance` - AI enhance\n4. `DELETE /api/v1/notes/:id` - Delete note\n\n### Database\n- PostgreSQL for structured data\n- Redis for caching & sessions",
+                    tags = listOf("API", "Architecture", "Backend", "Meeting")
+                ),
+                todos = listOf(
+                    TodoDto("todo-1", "Write OpenAPI spec for v1 endpoints", "high", tomorrow, false),
+                    TodoDto("todo-2", "Set up Redis caching layer", "medium", nextWeek, false),
+                    TodoDto("todo-3", "Review OAuth2 token flow with security team", "high", tomorrow, false)
+                ),
+                events = listOf(
+                    EventDto("event-1", "API Security Review", nextWeek, "15:00", "1h", "Review OAuth2 implementation with security team.", "Google Meet")
+                ),
+                topics = listOf(TopicDto("REST API Design", "Architecture decisions for the InkAction backend API."))
+            )
+        }
         return AgentPipelineStatus.Success(mockResponse)
     }
 
