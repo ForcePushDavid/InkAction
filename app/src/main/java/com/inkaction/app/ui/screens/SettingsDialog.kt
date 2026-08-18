@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.inkaction.app.ui.theme.AccentBlue
+import com.inkaction.app.ui.theme.AccentCyan
+import com.inkaction.app.ui.theme.AccentGreen
 import com.inkaction.app.ui.theme.BgSurface
 import com.inkaction.app.ui.theme.TextMuted
 import com.inkaction.app.ui.theme.TextPrimary
@@ -44,23 +46,20 @@ fun SettingsDialog(
     onSave: (apiKey: String, model: String, debounceMs: Long) -> Unit
 ) {
     var apiKey by remember { mutableStateOf(initialApiKey) }
-    var model by remember { mutableStateOf(initialModel.ifBlank { "gemini-3.7-flash" }) }
+    var model by remember { mutableStateOf(initialModel.ifBlank { "gemini-3.5-flash-lite" }) }
     var debounceMs by remember { mutableStateOf(initialDebounceMs) }
     var modelExpanded by remember { mutableStateOf(false) }
 
-    val presetModels = listOf(
-        "gemini-3.7-flash" to "Gemini 3.7 Flash (Flagship SOTA - Recommended)",
-        "gemini-3.6-flash" to "Gemini 3.6 Flash (High-Speed Multimodal)",
-        "gemini-3.5-flash" to "Gemini 3.5 Flash",
-        "gemini-3.5-flash-lite" to "Gemini 3.5 Flash Lite (Ultra Low Latency)",
-        "gemini-3.1-pro" to "Gemini 3.1 Pro (Deep Vision & Diagram Analysis)",
-        "gemini-3.1-flash-lite" to "Gemini 3.1 Flash Lite",
-        "gemini-3-flash" to "Gemini 3 Flash",
-        "gemini-2.5-flash" to "Gemini 2.5 Flash",
-        "gemini-2.5-flash-lite" to "Gemini 2.5 Flash Lite",
-        "gemini-2.5-pro" to "Gemini 2.5 Pro",
-        "gemini-2-flash" to "Gemini 2 Flash",
-        "gemini-2-flash-lite" to "Gemini 2 Flash Lite"
+    // Active models with confirmed positive quota (filtering out 0/0/0 models)
+    val activeModels = listOf(
+        Triple("gemini-3.5-flash-lite", "Gemini 3.5 Flash Lite", "⚡ 500 RPD / 15 RPM (Doporučeno pro časté psaní)"),
+        Triple("gemini-3.1-flash-lite", "Gemini 3.1 Flash Lite", "⚡ 500 RPD / 15 RPM (Vysoká denní kvóta)"),
+        Triple("gemini-3.7-flash", "Gemini 3.7 Flash", "🧠 Nejvyšší kvalita syntézy (20 RPD / 5 RPM)"),
+        Triple("gemini-3.6-flash", "Gemini 3.6 Flash", "⚡ Rychlá syntéza (20 RPD / 5 RPM)"),
+        Triple("gemini-3.5-flash", "Gemini 3.5 Flash", "⚡ Standardní Flash (20 RPD / 5 RPM)"),
+        Triple("gemini-3-flash", "Gemini 3 Flash", "⚡ Flash (20 RPD / 5 RPM)"),
+        Triple("gemini-2.5-flash", "Gemini 2.5 Flash", "⚡ Flash 2.5 (20 RPD / 5 RPM)"),
+        Triple("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite", "⚡ Flash Lite 2.5 (20 RPD / 10 RPM)")
     )
 
     Dialog(onDismissRequest = onDismiss) {
@@ -73,7 +72,7 @@ fun SettingsDialog(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                text = "InkAction Settings",
+                text = "InkAction Nastavení",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
@@ -88,12 +87,12 @@ fun SettingsDialog(
                 singleLine = true
             )
             Text(
-                text = "Leave blank for instant Smart Demo mode.",
+                text = "Ponechte prázdné pro lokální Smart Demo režim.",
                 fontSize = 11.sp,
                 color = TextMuted
             )
 
-            // Editable Model Selection + Dropdown
+            // Dropdown containing strictly active models with quota labels
             ExposedDropdownMenuBox(
                 expanded = modelExpanded,
                 onExpandedChange = { modelExpanded = !modelExpanded }
@@ -101,7 +100,7 @@ fun SettingsDialog(
                 OutlinedTextField(
                     value = model,
                     onValueChange = { model = it },
-                    label = { Text("Gemini Model (Type or Select)") },
+                    label = { Text("Aktivní Gemini Model") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
                     modifier = Modifier
                         .menuAnchor()
@@ -111,12 +110,18 @@ fun SettingsDialog(
                     expanded = modelExpanded,
                     onDismissRequest = { modelExpanded = false }
                 ) {
-                    presetModels.forEach { (modelId, description) ->
+                    activeModels.forEach { (modelId, name, quota) ->
                         DropdownMenuItem(
                             text = {
                                 Column {
-                                    Text(text = modelId, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    Text(text = description, fontSize = 11.sp, color = TextMuted)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(text = name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
+                                        Text(text = modelId, fontSize = 11.sp, color = AccentCyan)
+                                    }
+                                    Text(text = quota, fontSize = 11.sp, color = if (modelId.contains("lite")) AccentGreen else TextMuted)
                                 }
                             },
                             onClick = {
@@ -135,13 +140,13 @@ fun SettingsDialog(
                 horizontalArrangement = Arrangement.End
             ) {
                 TextButton(onClick = onDismiss) {
-                    Text("Cancel", color = TextMuted)
+                    Text("Zrušit", color = TextMuted)
                 }
                 Button(
                     onClick = { onSave(apiKey, model, debounceMs) },
                     colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
                 ) {
-                    Text("Save & Apply")
+                    Text("Uložit a použít")
                 }
             }
         }
