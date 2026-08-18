@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">InkAction</string>
+    <string name="title_canvas">S-Pen Canvas</string>
+    <string name="title_actions">Action Hub</string>
+    <string name="settings">Settings</string>
+    <string name="actionize_now">Actionize Now</string>
+    <string name="auto_push_countdown">Auto-push in %1$ds</string>
+</resources>

@@ -1,0 +1,206 @@
+package com.inkaction.app.viewmodel
+
+import android.app.Application
+import android.content.Context
+import android.graphics.Bitmap
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.inkaction.app.ai.AgentPipelineStatus
+import com.inkaction.app.ai.AgentResponse
+import com.inkaction.app.ai.EventDto
+import com.inkaction.app.ai.GeminiAgentEngine
+import com.inkaction.app.ai.NoteDto
+import com.inkaction.app.ai.TodoDto
+import com.inkaction.app.data.NoteStorageManager
+import com.inkaction.app.data.SavedTodo
+import com.inkaction.app.ui.canvas.ToolType
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+data class AutoPushUiState(
+    val isArmed: Boolean = false,
+    val progress: Float = 0f,
+    val remainingSeconds: Int = 0,
+    val isProcessing: Boolean = false
+)
+
+class InkActionViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val prefs = application.getSharedPreferences("inkaction_prefs", Context.MODE_PRIVATE)
+    private val storageManager = NoteStorageManager(application)
+
+    private val geminiEngine = GeminiAgentEngine()
+
+    private val _currentTool = MutableStateFlow(ToolType.PEN)
+    val currentTool: StateFlow<ToolType> = _currentTool.asStateFlow()
+
+    private val _currentColor = MutableStateFlow(android.graphics.Color.parseColor("#F0F6FC"))
+    val currentColor: StateFlow<Int> = _currentColor.asStateFlow()
+
+    private val _autoPushState = MutableStateFlow(AutoPushUiState())
+    val autoPushState: StateFlow<AutoPushUiState> = _autoPushState.asStateFlow()
+
+    private val _pipelineStatus = MutableStateFlow<AgentPipelineStatus>(AgentPipelineStatus.Idle)
+    val pipelineStatus: StateFlow<AgentPipelineStatus> = _pipelineStatus.asStateFlow()
+
+    private val _currentNote = MutableStateFlow<NoteDto?>(null)
+    val currentNote: StateFlow<NoteDto?> = _currentNote.asStateFlow()
+
+    private val _todos = MutableStateFlow<List<TodoDto>>(emptyList())
+    val todos: StateFlow<List<TodoDto>> = _todos.asStateFlow()
+
+    private val _events = MutableStateFlow<List<EventDto>>(emptyList())
+    val events: StateFlow<List<EventDto>> = _events.asStateFlow()
+
+    private var countdownJob: Job? = null
+    var debounceDurationMs: Long = 6000L
+
+    var apiKey: String = ""
+        private set
+    var modelName: String = "gemini-1.5-flash"
+        private set
+
+    init {
+        loadSettings()
+    }
+
+    private fun loadSettings() {
+        apiKey = prefs.getString("api_key", "") ?: ""
+        modelName = prefs.getString("model_name", "gemini-1.5-flash") ?: "gemini-1.5-flash"
+        debounceDurationMs = prefs.getLong("debounce_ms", 6000L)
+        geminiEngine.updateConfig(apiKey, modelName)
+    }
+
+    fun saveSettings(newKey: String, newModel: String, newDebounce: Long) {
+        apiKey = newKey
+        modelName = newModel
+        debounceDurationMs = newDebounce
+        prefs.edit()
+            .putString("api_key", newKey)
+            .putString("model_name", newModel)
+            .putLong("debounce_ms", newDebounce)
+            .apply()
+        geminiEngine.updateConfig(newKey, newModel)
+    }
+
+    fun setTool(tool: ToolType) {
+        _currentTool.value = tool
+    }
+
+    fun setColor(color: Int) {
+        _currentColor.value = color
+    }
+
+    fun onStrokeStarted() {
+        cancelCountdown()
+    }
+
+    fun onStrokeFinished(strokeCount: Int, getOcrBitmap: () -> Bitmap?) {
+        if (strokeCount <= 0 || debounceDurationMs <= 0 || _autoPushState.value.isProcessing) {
+            cancelCountdown()
+            return
+        }
+
+        startCountdown(getOcrBitmap)
+    }
+
+    private fun startCountdown(getOcrBitmap: () -> Bitmap?) {
+        cancelCountdown()
+        countdownJob = viewModelScope.launch {
+            val totalSteps = 60
+            val stepDelay = (debounceDurationMs / totalSteps).coerceAtLeast(50)
+            _autoPushState.value = AutoPushUiState(
+                isArmed = true,
+                progress = 0f,
+                remainingSeconds = (debounceDurationMs / 1000).toInt()
+            )
+
+            for (i in 1..totalSteps) {
+                delay(stepDelay)
+                val progress = i.toFloat() / totalSteps.toFloat()
+                val remainingMs = debounceDurationMs - (i * stepDelay)
+                val remainingSec = (remainingMs / 1000).toInt().coerceAtLeast(0)
+
+                _autoPushState.value = AutoPushUiState(
+                    isArmed = true,
+                    progress = progress,
+                    remainingSeconds = remainingSec
+                )
+            }
+
+            // Trigger AI Pipeline
+            triggerActionize(getOcrBitmap())
+        }
+    }
+
+    fun triggerActionize(bitmap: Bitmap?) {
+        cancelCountdown()
+        if (bitmap == null) return
+
+        _autoPushState.value = AutoPushUiState(isProcessing = true)
+
+        viewModelScope.launch {
+            geminiEngine.processInkBitmap(bitmap).collect { status ->
+                _pipelineStatus.value = status
+
+                if (status is AgentPipelineStatus.Success) {
+                    val res = status.response
+                    _currentNote.value = res.note
+                    _todos.value = res.todos
+                    _events.value = res.events
+                    _autoPushState.value = AutoPushUiState(isProcessing = false)
+
+                    // Persist to local storage
+                    res.note?.let { note ->
+                        storageManager.saveNote(
+                            title = note.title,
+                            summary = note.summary,
+                            markdown = note.markdown,
+                            tags = note.tags
+                        )
+                    }
+                    if (res.todos.isNotEmpty()) {
+                        storageManager.saveTodos(
+                            res.todos.map {
+                                SavedTodo(
+                                    id = it.id,
+                                    text = it.text,
+                                    priority = it.priority,
+                                    dueDate = it.dueDate,
+                                    isCompleted = it.completed
+                                )
+                            }
+                        )
+                    }
+                } else if (status is AgentPipelineStatus.Error) {
+                    _autoPushState.value = AutoPushUiState(isProcessing = false)
+                }
+            }
+        }
+    }
+
+    fun toggleTodo(todoId: String) {
+        val updated = _todos.value.map {
+            if (it.id == todoId) it.copy(completed = !it.completed) else it
+        }
+        _todos.value = updated
+        val todo = updated.find { it.id == todoId }
+        if (todo != null) {
+            viewModelScope.launch {
+                storageManager.updateTodoCompletion(todoId, todo.completed)
+            }
+        }
+    }
+
+    fun cancelCountdown() {
+        countdownJob?.cancel()
+        countdownJob = null
+        if (!_autoPushState.value.isProcessing) {
+            _autoPushState.value = AutoPushUiState()
+        }
+    }
+}

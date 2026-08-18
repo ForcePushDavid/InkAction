@@ -1,0 +1,57 @@
+package com.inkaction.app.util
+
+import android.content.Context
+import android.content.Intent
+import android.provider.CalendarContract
+import com.inkaction.app.ai.EventDto
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+
+object CalendarSyncUtil {
+
+    /**
+     * Launches Android System Calendar event creation intent
+     */
+    fun launchCalendarIntent(context: Context, event: EventDto) {
+        val intent = Intent(Intent.ACTION_INSERT).apply {
+            data = CalendarContract.Events.CONTENT_URI
+            putExtra(CalendarContract.Events.TITLE, event.title)
+            putExtra(CalendarContract.Events.DESCRIPTION, event.description)
+            putExtra(CalendarContract.Events.EVENT_LOCATION, event.location)
+
+            val startTimeMillis = parseDateTime(event.date, event.time)
+            putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, startTimeMillis)
+            putExtra(CalendarContract.EXTRA_EVENT_END_TIME, startTimeMillis + (60 * 60 * 1000))
+        }
+
+        if (intent.resolveActivity(context.packageManager) != null) {
+            context.startActivity(intent)
+        }
+    }
+
+    private fun parseDateTime(dateStr: String, timeStr: String): Long {
+        val cal = Calendar.getInstance()
+        try {
+            val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val parsedDate = format.parse(dateStr)
+            if (parsedDate != null) {
+                cal.time = parsedDate
+            }
+
+            if (timeStr.isNotBlank() && timeStr.contains(":")) {
+                val parts = timeStr.split(":")
+                val hour = parts[0].trim().toIntOrNull() ?: 10
+                val minute = parts[1].replace("[^0-9]".toRegex(), "").toIntOrNull() ?: 0
+                cal.set(Calendar.HOUR_OF_DAY, hour)
+                cal.set(Calendar.MINUTE, minute)
+            }
+        } catch (_: Exception) {
+            // Default to current time + 1 day
+            cal.add(Calendar.DAY_OF_YEAR, 1)
+            cal.set(Calendar.HOUR_OF_DAY, 10)
+            cal.set(Calendar.MINUTE, 0)
+        }
+        return cal.timeInMillis
+    }
+}
