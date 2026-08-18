@@ -179,4 +179,37 @@ class GeminiAgentEngine(
         )
         return AgentPipelineStatus.Success(mockResponse)
     }
+
+    suspend fun enhanceNoteContent(originalNote: String, markdown: String, language: String): String? {
+        if (apiKey.isBlank()) {
+            return "Demo Enhancement: The provided note lacks details about X and Y. Consider elaborating on Z. Next steps could include validating the technical assumptions outlined."
+        }
+        try {
+            val generativeModel = GenerativeModel(
+                modelName = modelName,
+                apiKey = apiKey.trim(),
+                generationConfig = generationConfig {
+                    temperature = 0.4f
+                }
+            )
+            val languageInstruction = if (language != "Auto-detect") "Please provide the output in $language." else ""
+            val prompt = """
+                Analyze the following note. Provide actionable next steps, deeper insights, missing context, or relevant follow-up questions.
+                Format the response nicely in Markdown.
+                $languageInstruction
+                
+                Original Summary:
+                $originalNote
+                
+                Note Markdown:
+                $markdown
+            """.trimIndent()
+            
+            val response = generativeModel.generateContent(prompt)
+            return response.text
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
 }

@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -84,6 +85,18 @@ fun MainWorkspaceScreen(
 ) {
     var inkCanvasRef by remember { mutableStateOf<InkCanvasView?>(null) }
     var showSettings by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
+    val backupImportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            val success = com.inkaction.app.util.BackupUtil.importFromZip(context, uri, context.filesDir)
+            if (success) {
+                android.widget.Toast.makeText(context, "Záloha obnovena. Restartujte aplikaci.", android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     val autoPushState by viewModel.autoPushState.collectAsState()
     val currentTool by viewModel.currentTool.collectAsState()
@@ -91,11 +104,27 @@ fun MainWorkspaceScreen(
 
     val currentNote by viewModel.currentNote.collectAsState()
     val allNotes by viewModel.allNotes.collectAsState()
+    val enhancingNotes by viewModel.enhancingNotes.collectAsState()
     val todos by viewModel.allTodos.collectAsState()
     val events by viewModel.events.collectAsState()
+    val folders by viewModel.foldersFlow.collectAsState()
 
     var selectedActionTab by remember { mutableIntStateOf(0) }
     var phoneNavTab by remember { mutableIntStateOf(0) } // 0 = Canvas, 1 = Actions
+
+    
+    val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            val success = com.inkaction.app.util.BackupUtil.importFromZip(context, uri, context.filesDir)
+            if (success) {
+                android.widget.Toast.makeText(context, "Záloha importována! Restartujte aplikaci.", android.widget.Toast.LENGTH_LONG).show()
+            } else {
+                android.widget.Toast.makeText(context, "Chyba při importu.", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     if (showSettings) {
         SettingsDialog(
@@ -109,6 +138,22 @@ fun MainWorkspaceScreen(
             onSave = { key, model, debounce, reminders, language, themeMode ->
                 viewModel.saveSettings(key, model, debounce, reminders, language, themeMode)
                 showSettings = false
+            },
+            onExportBackup = {
+                val uri = com.inkaction.app.util.BackupUtil.exportToZip(context, context.filesDir)
+                if (uri != null) {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = "application/zip"
+                        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(android.content.Intent.createChooser(intent, "Sdílet zálohu (ZIP)"))
+                } else {
+                    android.widget.Toast.makeText(context, "Chyba při vytváření zálohy.", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            },
+            onImportBackup = {
+                importLauncher.launch("application/zip")
             }
         )
     }
@@ -197,6 +242,14 @@ fun MainWorkspaceScreen(
                         }
                     }
 
+                    IconButton(onClick = { viewModel.toggleTemplate() }) {
+                        Icon(
+                            imageVector = Icons.Default.GridOn,
+                            contentDescription = "Toggle Template",
+                            tint = TextSecondary
+                        )
+                    }
+
                     IconButton(onClick = { showSettings = true }) {
                         Icon(
                             imageVector = Icons.Default.Settings,
@@ -239,8 +292,12 @@ fun MainWorkspaceScreen(
                             onTabSelected = { selectedActionTab = it },
                             note = currentNote,
                             allNotes = allNotes,
+                            enhancingNotes = enhancingNotes,
                             todos = todos,
                             events = events,
+                            folders = folders,
+                            onCreateFolder = { name, colorHex -> viewModel.createFolder(name, colorHex) },
+                            onMoveNote = { noteId, folderId -> viewModel.moveNoteToFolder(noteId, folderId) },
                             onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) },
                             onDeleteTodo = { id -> viewModel.deleteTodo(id) },
                             onResumeDrawing = { noteToResume -> 
@@ -249,7 +306,8 @@ fun MainWorkspaceScreen(
                                 phoneNavTab = 0
                             },
                             onDeleteNote = { id -> viewModel.deleteNote(id) },
-                            onTogglePin = { id -> viewModel.toggleNotePin(id) }
+                            onTogglePin = { id -> viewModel.toggleNotePin(id) },
+                            onEnhanceNote = { id -> viewModel.enhanceNote(id) }
                         )
                     }
                 }
@@ -270,8 +328,12 @@ fun MainWorkspaceScreen(
                             onTabSelected = { selectedActionTab = it },
                             note = currentNote,
                             allNotes = allNotes,
+                            enhancingNotes = enhancingNotes,
                             todos = todos,
                             events = events,
+                            folders = folders,
+                            onCreateFolder = { name, colorHex -> viewModel.createFolder(name, colorHex) },
+                            onMoveNote = { noteId, folderId -> viewModel.moveNoteToFolder(noteId, folderId) },
                             onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) },
                             onDeleteTodo = { id -> viewModel.deleteTodo(id) },
                             onResumeDrawing = { noteToResume -> 
@@ -280,7 +342,8 @@ fun MainWorkspaceScreen(
                                 phoneNavTab = 0
                             },
                             onDeleteNote = { id -> viewModel.deleteNote(id) },
-                            onTogglePin = { id -> viewModel.toggleNotePin(id) }
+                            onTogglePin = { id -> viewModel.toggleNotePin(id) },
+                            onEnhanceNote = { id -> viewModel.enhanceNote(id) }
                         )
                     }
                 }
@@ -358,6 +421,7 @@ fun CanvasPaneContent(
                 update = { view ->
                     view.currentTool = currentTool
                     view.currentColor = currentColor
+                    view.setTemplate(viewModel.canvasTemplate)
                 }
             )
         }
@@ -517,13 +581,18 @@ fun ActionsPaneContent(
     onTabSelected: (Int) -> Unit,
     note: com.inkaction.app.ai.NoteDto?,
     allNotes: List<com.inkaction.app.data.SavedNote>,
+    enhancingNotes: Map<Long, Boolean>,
     todos: List<com.inkaction.app.data.SavedTodo>,
     events: List<com.inkaction.app.ai.EventDto>,
+    folders: List<com.inkaction.app.data.NoteFolder>,
+    onCreateFolder: (String, String) -> Unit,
+    onMoveNote: (Long, Long?) -> Unit,
     onToggleTodo: (String, Boolean) -> Unit,
     onDeleteTodo: (String) -> Unit,
     onResumeDrawing: (com.inkaction.app.data.SavedNote) -> Unit,
     onDeleteNote: (Long) -> Unit,
-    onTogglePin: (Long) -> Unit
+    onTogglePin: (Long) -> Unit,
+    onEnhanceNote: (Long) -> Unit
 ) {
     val tabTitles = listOf("Notes", "Todos", "Calendar")
 
@@ -552,9 +621,14 @@ fun ActionsPaneContent(
                 0 -> NotesScreen(
                     note = note, 
                     allNotes = allNotes, 
+                    enhancingNotes = enhancingNotes,
+                    folders = folders,
+                    onCreateFolder = onCreateFolder,
+                    onMoveNote = onMoveNote,
                     onResumeDrawing = onResumeDrawing, 
                     onDeleteNote = onDeleteNote,
-                    onTogglePin = onTogglePin
+                    onTogglePin = onTogglePin,
+                    onEnhanceNote = onEnhanceNote
                 )
                 1 -> TodosScreen(todos = todos, onToggleTodo = onToggleTodo, onDeleteTodo = onDeleteTodo)
                 2 -> CalendarScreen(events = events)

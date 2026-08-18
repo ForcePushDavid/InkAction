@@ -55,6 +55,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     val pipelineStatus: StateFlow<AgentPipelineStatus> = _pipelineStatus.asStateFlow()
 
     val allNotes: StateFlow<List<SavedNote>> = storageManager.notesFlow
+    val foldersFlow: StateFlow<List<com.inkaction.app.data.NoteFolder>> = storageManager.foldersFlow
 
     private val _currentNote = MutableStateFlow<NoteDto?>(null)
     val currentNote: StateFlow<NoteDto?> = _currentNote.asStateFlow()
@@ -78,6 +79,13 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         private set
     var themeMode by mutableStateOf("system") // "system", "dark", "light"
         private set
+
+    var canvasTemplate by mutableStateOf(0)
+        private set
+
+    fun toggleTemplate() {
+        canvasTemplate = (canvasTemplate + 1) % 4
+    }
 
     init {
         loadSettings()
@@ -233,6 +241,35 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     fun toggleNotePin(noteId: Long) {
         viewModelScope.launch {
             storageManager.toggleNotePin(noteId)
+        }
+    }
+
+    fun createFolder(name: String, colorHex: String = "#38BDF8") {
+        viewModelScope.launch {
+            storageManager.createFolder(name, colorHex)
+        }
+    }
+
+    fun moveNoteToFolder(noteId: Long, folderId: Long?) {
+        viewModelScope.launch {
+            storageManager.updateNoteFolder(noteId, folderId)
+        }
+    }
+
+    private val _enhancingNotes = MutableStateFlow<Map<Long, Boolean>>(emptyMap())
+    val enhancingNotes: StateFlow<Map<Long, Boolean>> = _enhancingNotes.asStateFlow()
+
+    fun enhanceNote(noteId: Long) {
+        viewModelScope.launch {
+            _enhancingNotes.value = _enhancingNotes.value.toMutableMap().apply { put(noteId, true) }
+            val note = allNotes.value.find { it.id == noteId }
+            if (note != null) {
+                val enhancedText = geminiEngine.enhanceNoteContent(note.summary, note.markdown, noteLanguage)
+                if (enhancedText != null) {
+                    storageManager.updateNoteEnhancement(noteId, enhancedText)
+                }
+            }
+            _enhancingNotes.value = _enhancingNotes.value.toMutableMap().apply { remove(noteId) }
         }
     }
 

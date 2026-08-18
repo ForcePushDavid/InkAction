@@ -10,6 +10,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
 
+data class NoteFolder(
+    val id: Long = System.currentTimeMillis(),
+    val name: String,
+    val colorHex: String = "#38BDF8"
+)
+
 data class SavedNote(
     val id: Long = System.currentTimeMillis(),
     val title: String,
@@ -18,7 +24,9 @@ data class SavedNote(
     val tags: List<String> = emptyList(),
     val strokes: List<com.inkaction.app.ui.canvas.InkStroke> = emptyList(),
     val timestamp: Long = System.currentTimeMillis(),
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    val folderId: Long? = null,
+    val aiEnhancement: String? = null
 )
 
 data class SavedTodo(
@@ -35,12 +43,16 @@ class NoteStorageManager(private val context: Context) {
     private val gson = Gson()
     private val notesFile = File(context.filesDir, "saved_notes.json")
     private val todosFile = File(context.filesDir, "saved_todos.json")
+    private val foldersFile = File(context.filesDir, "saved_folders.json")
 
     private val _notesFlow = MutableStateFlow<List<SavedNote>>(emptyList())
     val notesFlow: StateFlow<List<SavedNote>> = _notesFlow.asStateFlow()
 
     private val _todosFlow = MutableStateFlow<List<SavedTodo>>(emptyList())
     val todosFlow: StateFlow<List<SavedTodo>> = _todosFlow.asStateFlow()
+
+    private val _foldersFlow = MutableStateFlow<List<NoteFolder>>(emptyList())
+    val foldersFlow: StateFlow<List<NoteFolder>> = _foldersFlow.asStateFlow()
 
     init {
         loadData()
@@ -59,6 +71,12 @@ class NoteStorageManager(private val context: Context) {
                 val type = object : TypeToken<List<SavedTodo>>() {}.type
                 val todos: List<SavedTodo>? = gson.fromJson(json, type)
                 if (todos != null) _todosFlow.value = todos
+            }
+            if (foldersFile.exists()) {
+                val json = foldersFile.readText()
+                val type = object : TypeToken<List<NoteFolder>>() {}.type
+                val folders: List<NoteFolder>? = gson.fromJson(json, type)
+                if (folders != null) _foldersFlow.value = folders
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -135,6 +153,42 @@ class NoteStorageManager(private val context: Context) {
     suspend fun toggleNotePin(noteId: Long) = withContext(Dispatchers.IO) {
         val currentList = _notesFlow.value.map {
             if (it.id == noteId) it.copy(isPinned = !it.isPinned) else it
+        }
+        _notesFlow.value = currentList
+        try {
+            notesFile.writeText(gson.toJson(currentList))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun createFolder(name: String, colorHex: String) = withContext(Dispatchers.IO) {
+        val folder = NoteFolder(name = name, colorHex = colorHex)
+        val currentList = _foldersFlow.value.toMutableList()
+        currentList.add(folder)
+        _foldersFlow.value = currentList
+        try {
+            foldersFile.writeText(gson.toJson(currentList))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun updateNoteFolder(noteId: Long, folderId: Long?) = withContext(Dispatchers.IO) {
+        val currentList = _notesFlow.value.map {
+            if (it.id == noteId) it.copy(folderId = folderId) else it
+        }
+        _notesFlow.value = currentList
+        try {
+            notesFile.writeText(gson.toJson(currentList))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun updateNoteEnhancement(noteId: Long, enhancement: String) = withContext(Dispatchers.IO) {
+        val currentList = _notesFlow.value.map {
+            if (it.id == noteId) it.copy(aiEnhancement = enhancement) else it
         }
         _notesFlow.value = currentList
         try {

@@ -34,6 +34,12 @@ class InkCanvasView @JvmOverloads constructor(
     var currentColor: Int = Color.parseColor("#F0F6FC")
     var currentSize: Float = 6f
 
+    var templateType: Int = 0
+    fun setTemplate(type: Int) {
+        templateType = type
+        invalidate()
+    }
+
     var onStrokeStarted: (() -> Unit)? = null
     var onStrokeFinished: ((Int) -> Unit)? = null
 
@@ -168,8 +174,8 @@ class InkCanvasView @JvmOverloads constructor(
         return super.onTouchEvent(event)
     }
 
-    private val gridPaint = Paint().apply {
-        color = Color.parseColor("#33FFFFFF")
+    private val templatePaint = Paint().apply {
+        color = Color.parseColor("#30363D")
         strokeWidth = 3f
         isAntiAlias = true
         style = Paint.Style.FILL
@@ -178,11 +184,35 @@ class InkCanvasView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // Vykreslení Samsung Notes mřížky (subtilní tečky)
-        val spacing = 75f
-        for (x in 0..width step spacing.toInt()) {
-            for (y in 0..height step spacing.toInt()) {
-                canvas.drawCircle(x.toFloat(), y.toFloat(), 2f, gridPaint)
+        if (templateType > 0) {
+            when (templateType) {
+                1 -> { // Dots
+                    val spacing = 50f
+                    for (x in 0..width step spacing.toInt()) {
+                        for (y in 0..height step spacing.toInt()) {
+                            canvas.drawCircle(x.toFloat(), y.toFloat(), 2f, templatePaint)
+                        }
+                    }
+                }
+                2 -> { // Lines
+                    val spacing = 80f
+                    templatePaint.style = Paint.Style.STROKE
+                    for (y in 0..height step spacing.toInt()) {
+                        canvas.drawLine(0f, y.toFloat(), width.toFloat(), y.toFloat(), templatePaint)
+                    }
+                    templatePaint.style = Paint.Style.FILL
+                }
+                3 -> { // Grid
+                    val spacing = 80f
+                    templatePaint.style = Paint.Style.STROKE
+                    for (x in 0..width step spacing.toInt()) {
+                        canvas.drawLine(x.toFloat(), 0f, x.toFloat(), height.toFloat(), templatePaint)
+                    }
+                    for (y in 0..height step spacing.toInt()) {
+                        canvas.drawLine(0f, y.toFloat(), width.toFloat(), y.toFloat(), templatePaint)
+                    }
+                    templatePaint.style = Paint.Style.FILL
+                }
             }
         }
 

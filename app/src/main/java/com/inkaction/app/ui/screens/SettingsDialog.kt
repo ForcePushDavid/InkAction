@@ -33,6 +33,7 @@ import com.inkaction.app.ui.theme.AccentBlue
 import com.inkaction.app.ui.theme.AccentCyan
 import com.inkaction.app.ui.theme.AccentGreen
 import com.inkaction.app.ui.theme.BgSurface
+import com.inkaction.app.ui.theme.BgTertiary
 import com.inkaction.app.ui.theme.TextMuted
 import com.inkaction.app.ui.theme.TextPrimary
 
@@ -46,7 +47,9 @@ fun SettingsDialog(
     initialLanguage: String,
     initialThemeMode: String,
     onDismiss: () -> Unit,
-    onSave: (apiKey: String, model: String, debounceMs: Long, reminders: Boolean, language: String, themeMode: String) -> Unit
+    onSave: (apiKey: String, model: String, debounceMs: Long, reminders: Boolean, language: String, themeMode: String) -> Unit,
+    onExportBackup: () -> Unit,
+    onImportBackup: () -> Unit
 ) {
     var apiKey by remember { mutableStateOf(initialApiKey) }
     var model by remember { mutableStateOf(initialModel.ifBlank { "gemini-3.5-flash-lite" }) }
@@ -209,6 +212,20 @@ fun SettingsDialog(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            Text(text = "Záloha a obnova", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(onClick = onExportBackup, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = BgTertiary, contentColor = TextPrimary)) {
+                    Text("Exportovat (ZIP)", fontSize = 12.sp)
+                }
+                Button(onClick = onImportBackup, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = BgTertiary, contentColor = TextPrimary)) {
+                    Text("Importovat (ZIP)", fontSize = 12.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
