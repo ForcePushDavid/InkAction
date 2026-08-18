@@ -22,16 +22,21 @@
   - Pressure-sensitive ink engine (`MotionEvent.TOOL_TYPE_STYLUS`).
   - Native **Palm Rejection** (rejects accidental finger touches when stylus is near).
   - S-Pen barrel button click support for instant eraser switching.
+  - **Smart Stroke Eraser**: Instantly wipe out entire lines/strokes with a single touch, just like Samsung Notes!
 - **"Done Writing" Auto-Push Engine**:
-  - StateFlow countdown timer arms on stroke release (customizable: 4s, 6s, 8s, 12s).
-  - Visual circular progress ring on screen.
+  - StateFlow countdown timer arms on stroke release (currently locked to 10m to save quota).
+  - Processing status clearly visible in the top action bar or Kebab menu.
   - Automatically sends bitmap snapshot to Google Gemini when idle.
 - **Adaptive Samsung Galaxy Experience**:
   - **Dual-Pane Split View** on **Galaxy Tab S9** & Foldables.
   - **Tabbed Mobile Experience** on **Galaxy S26 Ultra**.
+  - **Session Persistence**: Switch tabs freely—your in-progress drawings are preserved in memory!
 - **Android System Integration**:
-  - **Room Database**: Offline persistence for all synthesized notes & todo checklists.
+  - **JSON Storage**: Offline persistence for synthesized notes & todo checklists.
   - **Android Calendar Provider**: 1-click sync to Google Calendar / Samsung Calendar via `CalendarContract`.
+  - **PDF Export**: Generate perfectly formatted PDF reports directly from your handwritten synthesis.
+  - **Homescreen Widget**: Pin your InkAction Todo list right to your Android desktop, auto-syncing with your notes.
+  - **Local Reminders**: Configurable local notifications for upcoming tasks.
 
 ---
 
