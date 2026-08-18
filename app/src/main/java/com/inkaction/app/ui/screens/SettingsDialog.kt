@@ -50,12 +50,12 @@ fun SettingsDialog(
     var debounceMs by remember { mutableStateOf(initialDebounceMs) }
     var modelExpanded by remember { mutableStateOf(false) }
 
-    // Zjednodušený seznam jen těch nejlepších modelů z řady 3.5+ podle tvých kvót
+    // Seznam modelů s přesným rozepsáním RPM (dotazy za minutu) a RPD (dotazy za den)
     val activeModels = listOf(
-        Triple("gemini-3.5-flash-lite", "Gemini 3.5 Flash Lite (Výchozí)", "🚀 500 dotazů/den | Bleskové pro běžné poznámky"),
-        Triple("gemini-3.7-flash", "Gemini 3.7 Flash", "🧠 20 dotazů/den | Nejnovější pro složité nákresy"),
-        Triple("gemini-3.6-flash", "Gemini 3.6 Flash", "⚡ 20 dotazů/den | Multimodální rychlost"),
-        Triple("gemini-3.5-flash", "Gemini 3.5 Flash", "⚡ 20 dotazů/den | Standardní Flash")
+        Triple("gemini-3.5-flash-lite", "Gemini 3.5 Flash Lite (Výchozí)", "🚀 15 RPM / 500 RPD | Rychlý, pro běžné psaní"),
+        Triple("gemini-3.7-flash", "Gemini 3.7 Flash", "🧠 5 RPM / 20 RPD | Nejchytřejší, bacha na limit"),
+        Triple("gemini-3.6-flash", "Gemini 3.6 Flash", "⚡ 5 RPM / 20 RPD | Multimodální standard"),
+        Triple("gemini-3.5-flash", "Gemini 3.5 Flash", "⚡ 5 RPM / 20 RPD | Starší standard")
     )
 
     Dialog(onDismissRequest = onDismiss) {

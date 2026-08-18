@@ -71,7 +71,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     private fun loadSettings() {
         apiKey = prefs.getString("api_key", "") ?: ""
         modelName = prefs.getString("model_name", "gemini-3.5-flash-lite") ?: "gemini-3.5-flash-lite"
-        debounceDurationMs = prefs.getLong("debounce_ms", 6000L)
+        debounceDurationMs = prefs.getLong("debounce_ms", 12000L) // Zvýšeno na 12s kvůli 5 RPM limitům!
         geminiEngine.updateConfig(apiKey, modelName)
     }
 
