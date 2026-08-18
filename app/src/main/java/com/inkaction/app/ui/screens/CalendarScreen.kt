@@ -104,69 +104,94 @@ fun EventCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(BgSurface)
-            .padding(14.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+            .clip(RoundedCornerShape(8.dp))
+            .background(BgSurface),
         verticalAlignment = Alignment.Top
     ) {
-        // Date block
-        Column(
+        // Vertical color stripe (Google Calendar style)
+        Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(10.dp))
-                .background(BgTertiary)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .width(4.dp)
+                .height(80.dp)
+                .background(AccentBlue)
+        )
+
+        Row(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.Top
         ) {
-            Text(
-                text = event.date.takeLast(5),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = AccentCyan
-            )
-            Text(
-                text = event.time,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
-        }
-
-        // Details
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = event.title,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
-
-            if (event.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
+            // Time / Date indicator
+            Column(
+                modifier = Modifier.width(55.dp),
+                horizontalAlignment = Alignment.End
+            ) {
                 Text(
-                    text = event.description,
-                    fontSize = 12.5.sp,
-                    color = TextSecondary
+                    text = event.time.ifBlank { "All-day" },
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
                 )
+                if (event.duration.isNotBlank()) {
+                    Text(
+                        text = event.duration,
+                        fontSize = 11.sp,
+                        color = TextMuted
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // Dot separator
+            Box(
+                modifier = Modifier
+                    .padding(top = 6.dp)
+                    .size(8.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(AccentBlue)
+            )
 
-            ElevatedButton(
-                onClick = onAddToCalendar,
-                colors = ButtonDefaults.elevatedButtonColors(
-                    containerColor = AccentBlue.copy(alpha = 0.2f),
-                    contentColor = AccentBlue
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Event,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
+            // Details
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = event.title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
                 )
-                Spacer(modifier = Modifier.size(6.dp))
-                Text(text = "Sync to Calendar", fontSize = 12.sp)
+                
+                if (event.date.isNotBlank()) {
+                    Text(
+                        text = event.date,
+                        fontSize = 12.sp,
+                        color = AccentCyan
+                    )
+                }
+
+                if (event.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = event.description,
+                        fontSize = 13.sp,
+                        color = TextSecondary,
+                        lineHeight = 16.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                androidx.compose.material3.TextButton(
+                    onClick = onAddToCalendar,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 0.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Event,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = AccentBlue
+                    )
+                    Spacer(modifier = Modifier.size(6.dp))
+                    Text(text = "Add to Google Calendar", fontSize = 12.sp, color = AccentBlue)
+                }
             }
         }
     }

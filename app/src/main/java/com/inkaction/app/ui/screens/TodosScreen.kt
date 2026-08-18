@@ -95,62 +95,70 @@ fun TodoCard(
     todo: TodoDto,
     onToggle: () -> Unit
 ) {
+    val priorityColor = when (todo.priority.lowercase()) {
+        "high" -> AccentRed
+        "low" -> AccentBlue
+        else -> AccentAmber
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (todo.completed) BgSurface.copy(alpha = 0.5f) else BgSurface)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (todo.completed) BgSurface.copy(alpha = 0.3f) else BgSurface)
+            .androidx.compose.foundation.clickable { onToggle() }
+            .padding(vertical = 12.dp, horizontal = 16.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Checkbox(
-            checked = todo.completed,
-            onCheckedChange = { onToggle() },
-            colors = CheckboxDefaults.colors(
-                checkedColor = AccentGreen,
-                checkmarkColor = TextPrimary,
-                uncheckedColor = TextMuted
-            )
-        )
+        // Todoist style circular checkbox colored by priority
+        Box(
+            modifier = Modifier
+                .padding(top = 2.dp)
+                .size(20.dp)
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .androidx.compose.foundation.border(
+                    width = 2.dp, 
+                    color = if (todo.completed) TextMuted else priorityColor, 
+                    shape = androidx.compose.foundation.shape.CircleShape
+                )
+                .background(if (todo.completed) TextMuted else androidx.compose.ui.graphics.Color.Transparent),
+            contentAlignment = Alignment.Center
+        ) {
+            if (todo.completed) {
+                Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Default.Check,
+                    contentDescription = null,
+                    tint = BgSurface,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        }
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = todo.text,
-                fontSize = 14.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
                 color = if (todo.completed) TextMuted else TextPrimary,
                 textDecoration = if (todo.completed) TextDecoration.LineThrough else TextDecoration.None
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val (badgeBg, badgeColor) = when (todo.priority.lowercase()) {
-                    "high" -> AccentRed.copy(alpha = 0.2f) to AccentRed
-                    "low" -> AccentBlue.copy(alpha = 0.2f) to AccentBlue
-                    else -> AccentAmber.copy(alpha = 0.2f) to AccentAmber
-                }
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(badgeBg)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = todo.priority.uppercase(),
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = badgeColor
+            if (todo.dueDate.isNotBlank() && todo.dueDate != "None") {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        tint = AccentRed,
+                        modifier = Modifier.size(12.dp)
                     )
-                }
-
-                if (todo.dueDate.isNotBlank() && todo.dueDate != "None") {
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Due: ${todo.dueDate}",
-                        fontSize = 11.sp,
-                        color = TextMuted
+                        text = todo.dueDate,
+                        fontSize = 12.sp,
+                        color = AccentRed,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }

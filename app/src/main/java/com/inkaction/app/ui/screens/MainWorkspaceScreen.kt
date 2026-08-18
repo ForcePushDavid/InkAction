@@ -27,11 +27,14 @@ import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
@@ -136,27 +139,50 @@ fun MainWorkspaceScreen(
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(AccentCyan.copy(alpha = 0.15f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = if (isTabletLayout) "Galaxy Tab S9" else "S26 Ultra",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = AccentCyan
-                        )
-                    }
                 }
 
-                IconButton(onClick = { showSettings = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Settings",
-                        tint = TextSecondary
-                    )
+                Row {
+                    var showMenu by remember { mutableStateOf(false) }
+                    
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Menu",
+                                tint = TextSecondary
+                            )
+                        }
+                        
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            modifier = Modifier.background(BgSurface)
+                        ) {
+                            DropdownMenuItem(
+                                text = { 
+                                    Column {
+                                        Text("Auto-Push Status", fontWeight = FontWeight.Bold, color = TextPrimary)
+                                        Text(
+                                            text = if (autoPushState.isProcessing) "Zpracovávám AI..." 
+                                                   else if (autoPushState.isArmed) "Čekám na pauzu (${autoPushState.remainingSeconds}s)" 
+                                                   else "Neaktivní (Piš)",
+                                            fontSize = 12.sp,
+                                            color = TextMuted
+                                        )
+                                    }
+                                },
+                                onClick = { showMenu = false }
+                            )
+                        }
+                    }
+
+                    IconButton(onClick = { showSettings = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = TextSecondary
+                        )
+                    }
                 }
             }
 
@@ -299,17 +325,13 @@ fun CanvasPaneContent(
                 .padding(top = 12.dp)
         )
 
-        // Bottom Auto-Push & Actionize bar
+        // Bottom Actionize bar
         Row(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
+                .align(Alignment.BottomEnd)
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AutoPushCountdownPill(state = autoPushState)
-
             Button(
                 onClick = { viewModel.triggerActionize(canvasViewRef?.createOcrBitmap()) },
                 colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),

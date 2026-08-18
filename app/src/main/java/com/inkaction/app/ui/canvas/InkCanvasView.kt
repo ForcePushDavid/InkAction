@@ -123,8 +123,23 @@ class InkCanvasView @JvmOverloads constructor(
         return super.onTouchEvent(event)
     }
 
+    private val gridPaint = Paint().apply {
+        color = Color.parseColor("#33FFFFFF")
+        strokeWidth = 3f
+        isAntiAlias = true
+        style = Paint.Style.FILL
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+
+        // Vykreslení Samsung Notes mřížky (subtilní tečky)
+        val spacing = 75f
+        for (x in 0..width step spacing.toInt()) {
+            for (y in 0..height step spacing.toInt()) {
+                canvas.drawCircle(x.toFloat(), y.toFloat(), 2f, gridPaint)
+            }
+        }
 
         for (stroke in strokes) {
             drawStroke(canvas, stroke)
