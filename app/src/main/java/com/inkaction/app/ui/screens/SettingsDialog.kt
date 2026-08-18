@@ -50,16 +50,12 @@ fun SettingsDialog(
     var debounceMs by remember { mutableStateOf(initialDebounceMs) }
     var modelExpanded by remember { mutableStateOf(false) }
 
-    // Active models with confirmed positive quota (filtering out 0/0/0 models)
+    // Zjednodušený seznam jen těch nejlepších modelů z řady 3.5+ podle tvých kvót
     val activeModels = listOf(
-        Triple("gemini-3.5-flash-lite", "Gemini 3.5 Flash Lite", "⚡ 500 RPD / 15 RPM (Doporučeno pro časté psaní)"),
-        Triple("gemini-3.1-flash-lite", "Gemini 3.1 Flash Lite", "⚡ 500 RPD / 15 RPM (Vysoká denní kvóta)"),
-        Triple("gemini-3.7-flash", "Gemini 3.7 Flash", "🧠 Nejvyšší kvalita syntézy (20 RPD / 5 RPM)"),
-        Triple("gemini-3.6-flash", "Gemini 3.6 Flash", "⚡ Rychlá syntéza (20 RPD / 5 RPM)"),
-        Triple("gemini-3.5-flash", "Gemini 3.5 Flash", "⚡ Standardní Flash (20 RPD / 5 RPM)"),
-        Triple("gemini-3-flash", "Gemini 3 Flash", "⚡ Flash (20 RPD / 5 RPM)"),
-        Triple("gemini-2.5-flash", "Gemini 2.5 Flash", "⚡ Flash 2.5 (20 RPD / 5 RPM)"),
-        Triple("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite", "⚡ Flash Lite 2.5 (20 RPD / 10 RPM)")
+        Triple("gemini-3.5-flash-lite", "Gemini 3.5 Flash Lite (Výchozí)", "🚀 500 dotazů/den | Bleskové pro běžné poznámky"),
+        Triple("gemini-3.7-flash", "Gemini 3.7 Flash", "🧠 20 dotazů/den | Nejnovější pro složité nákresy"),
+        Triple("gemini-3.6-flash", "Gemini 3.6 Flash", "⚡ 20 dotazů/den | Multimodální rychlost"),
+        Triple("gemini-3.5-flash", "Gemini 3.5 Flash", "⚡ 20 dotazů/den | Standardní Flash")
     )
 
     Dialog(onDismissRequest = onDismiss) {
