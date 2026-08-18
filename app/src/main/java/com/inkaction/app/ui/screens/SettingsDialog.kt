@@ -42,12 +42,14 @@ fun SettingsDialog(
     initialApiKey: String,
     initialModel: String,
     initialDebounceMs: Long,
+    initialReminders: Boolean,
     onDismiss: () -> Unit,
-    onSave: (apiKey: String, model: String, debounceMs: Long) -> Unit
+    onSave: (apiKey: String, model: String, debounceMs: Long, reminders: Boolean) -> Unit
 ) {
     var apiKey by remember { mutableStateOf(initialApiKey) }
     var model by remember { mutableStateOf(initialModel.ifBlank { "gemini-3.5-flash-lite" }) }
     var debounceMs by remember { mutableStateOf(initialDebounceMs) }
+    var remindersEnabled by remember { mutableStateOf(initialReminders) }
     var modelExpanded by remember { mutableStateOf(false) }
 
     // Seznam modelů s přesným rozepsáním RPM (dotazy za minutu) a RPD (dotazy za den)
@@ -129,7 +131,24 @@ fun SettingsDialog(
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Povolit připomínky", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Lokální notifikace pro úkoly a události", color = TextMuted, fontSize = 12.sp)
+                }
+                androidx.compose.material3.Switch(
+                    checked = remindersEnabled,
+                    onCheckedChange = { remindersEnabled = it }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -139,7 +158,7 @@ fun SettingsDialog(
                     Text("Zrušit", color = TextMuted)
                 }
                 Button(
-                    onClick = { onSave(apiKey, model, debounceMs) },
+                    onClick = { onSave(apiKey, model, debounceMs, remindersEnabled) },
                     colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
                 ) {
                     Text("Uložit a použít")

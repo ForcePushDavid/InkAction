@@ -60,7 +60,10 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     val events: StateFlow<List<EventDto>> = _events.asStateFlow()
 
     private var countdownJob: Job? = null
-    var debounceDurationMs: Long = 6000L
+    var debounceDurationMs: Long = 600000L // Default 10 minutes
+        private set
+    var remindersEnabled: Boolean = false
+        private set
 
     var apiKey: String = ""
         private set
@@ -74,6 +77,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     private fun loadSettings() {
         apiKey = prefs.getString("api_key", "") ?: ""
         modelName = prefs.getString("model_name", "gemini-3.5-flash-lite") ?: "gemini-3.5-flash-lite"
+        remindersEnabled = prefs.getBoolean("reminders_enabled", false)
         // Natvrdo nastavíme 10 minut, aby se přepsaly případné starší uložené hodnoty
         debounceDurationMs = 600000L 
         prefs.edit().putLong("debounce_ms", 600000L).apply()
@@ -81,15 +85,19 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         geminiEngine.updateConfig(apiKey, modelName)
     }
 
-    fun saveSettings(newKey: String, newModel: String, newDebounce: Long) {
+    fun saveSettings(newKey: String, newModel: String, newDebounce: Long, reminders: Boolean) {
         apiKey = newKey
         modelName = newModel
-        debounceDurationMs = newDebounce
+        debounceDurationMs = 600000L // Keep hardcoded 10 mins
+        remindersEnabled = reminders
+
         prefs.edit()
             .putString("api_key", newKey)
             .putString("model_name", newModel)
-            .putLong("debounce_ms", newDebounce)
+            .putLong("debounce_ms", 600000L)
+            .putBoolean("reminders_enabled", reminders)
             .apply()
+
         geminiEngine.updateConfig(newKey, newModel)
     }
 

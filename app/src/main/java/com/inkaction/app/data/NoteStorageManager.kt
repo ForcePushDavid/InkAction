@@ -91,6 +91,7 @@ class NoteStorageManager(private val context: Context) {
         _todosFlow.value = currentList
         try {
             todosFile.writeText(gson.toJson(currentList))
+            updateWidget()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -103,6 +104,22 @@ class NoteStorageManager(private val context: Context) {
         _todosFlow.value = currentList
         try {
             todosFile.writeText(gson.toJson(currentList))
+            updateWidget()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun updateWidget() {
+        try {
+            val intent = android.content.Intent(context, com.inkaction.app.widget.TodoWidgetProvider::class.java).apply {
+                action = android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE
+            }
+            val appWidgetManager = android.appwidget.AppWidgetManager.getInstance(context)
+            val ids = appWidgetManager.getAppWidgetIds(android.content.ComponentName(context, com.inkaction.app.widget.TodoWidgetProvider::class.java))
+            intent.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+            context.sendBroadcast(intent)
+            appWidgetManager.notifyAppWidgetViewDataChanged(ids, com.inkaction.app.R.id.widget_list)
         } catch (e: Exception) {
             e.printStackTrace()
         }

@@ -98,9 +98,10 @@ fun MainWorkspaceScreen(
             initialApiKey = viewModel.apiKey,
             initialModel = viewModel.modelName,
             initialDebounceMs = viewModel.debounceDurationMs,
+            initialReminders = viewModel.remindersEnabled,
             onDismiss = { showSettings = false },
-            onSave = { key, model, debounce ->
-                viewModel.saveSettings(key, model, debounce)
+            onSave = { key, model, debounce, reminders ->
+                viewModel.saveSettings(key, model, debounce, reminders)
                 showSettings = false
             }
         )
