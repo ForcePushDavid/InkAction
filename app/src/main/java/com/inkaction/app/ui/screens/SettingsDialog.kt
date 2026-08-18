@@ -43,14 +43,17 @@ fun SettingsDialog(
     initialModel: String,
     initialDebounceMs: Long,
     initialReminders: Boolean,
+    initialLanguage: String,
     onDismiss: () -> Unit,
-    onSave: (apiKey: String, model: String, debounceMs: Long, reminders: Boolean) -> Unit
+    onSave: (apiKey: String, model: String, debounceMs: Long, reminders: Boolean, language: String) -> Unit
 ) {
     var apiKey by remember { mutableStateOf(initialApiKey) }
     var model by remember { mutableStateOf(initialModel.ifBlank { "gemini-3.5-flash-lite" }) }
     var debounceMs by remember { mutableStateOf(initialDebounceMs) }
     var remindersEnabled by remember { mutableStateOf(initialReminders) }
+    var language by remember { mutableStateOf(initialLanguage) }
     var modelExpanded by remember { mutableStateOf(false) }
+    var languageExpanded by remember { mutableStateOf(false) }
 
     // Seznam modelů s přesným rozepsáním RPM (dotazy za minutu) a RPD (dotazy za den)
     val activeModels = listOf(
@@ -133,6 +136,38 @@ fun SettingsDialog(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            val languages = listOf("Auto-detect", "Čeština", "Slovenčina", "English", "Deutsch", "Español", "Français", "Italiano", "Polski", "Русский", "Українська")
+
+            ExposedDropdownMenuBox(
+                expanded = languageExpanded,
+                onExpandedChange = { languageExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = language,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Jazyk poznámky") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = languageExpanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = languageExpanded,
+                    onDismissRequest = { languageExpanded = false }
+                ) {
+                    languages.forEach { lang ->
+                        DropdownMenuItem(
+                            text = { Text(text = lang) },
+                            onClick = {
+                                language = lang
+                                languageExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -158,7 +193,7 @@ fun SettingsDialog(
                     Text("Zrušit", color = TextMuted)
                 }
                 Button(
-                    onClick = { onSave(apiKey, model, debounceMs, remindersEnabled) },
+                    onClick = { onSave(apiKey, model, debounceMs, remindersEnabled, language) },
                     colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
                 ) {
                     Text("Uložit a použít")

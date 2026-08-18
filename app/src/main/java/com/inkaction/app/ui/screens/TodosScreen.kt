@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inkaction.app.ai.TodoDto
+import com.inkaction.app.data.SavedTodo
 import com.inkaction.app.ui.theme.AccentAmber
 import com.inkaction.app.ui.theme.AccentBlue
 import com.inkaction.app.ui.theme.AccentGreen
@@ -47,8 +48,8 @@ import com.inkaction.app.ui.theme.TextSecondary
 
 @Composable
 fun TodosScreen(
-    todos: List<TodoDto>,
-    onToggleTodo: (String) -> Unit,
+    todos: List<SavedTodo>,
+    onToggleTodo: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (todos.isEmpty()) {
@@ -90,16 +91,17 @@ fun TodosScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         items(todos, key = { it.id }) { todo ->
-            TodoCard(todo = todo, onToggle = { onToggleTodo(todo.id) })
+            TodoCard(todo = todo, onToggle = { onToggleTodo(todo.id, todo.isCompleted) })
         }
     }
 }
 
 @Composable
 fun TodoCard(
-    todo: TodoDto,
+    todo: com.inkaction.app.data.SavedTodo,
     onToggle: () -> Unit
 ) {
+    val isDone = todo.isCompleted
     val priorityColor = when (todo.priority.lowercase()) {
         "high" -> AccentRed
         "low" -> AccentBlue
@@ -110,7 +112,7 @@ fun TodoCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(if (todo.completed) BgSurface.copy(alpha = 0.3f) else BgSurface)
+            .background(if (todo.isCompleted) BgSurface.copy(alpha = 0.3f) else BgSurface)
             .clickable { onToggle() }
             .padding(vertical = 12.dp, horizontal = 16.dp),
         verticalAlignment = Alignment.Top,
@@ -124,13 +126,13 @@ fun TodoCard(
                 .clip(androidx.compose.foundation.shape.CircleShape)
                 .border(
                     width = 2.dp, 
-                    color = if (todo.completed) TextMuted else priorityColor, 
+                    color = if (todo.isCompleted) TextMuted else priorityColor, 
                     shape = androidx.compose.foundation.shape.CircleShape
                 )
-                .background(if (todo.completed) TextMuted else androidx.compose.ui.graphics.Color.Transparent),
+                .background(if (todo.isCompleted) TextMuted else androidx.compose.ui.graphics.Color.Transparent),
             contentAlignment = Alignment.Center
         ) {
-            if (todo.completed) {
+            if (todo.isCompleted) {
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
@@ -145,8 +147,8 @@ fun TodoCard(
                 text = todo.text,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (todo.completed) TextMuted else TextPrimary,
-                textDecoration = if (todo.completed) TextDecoration.LineThrough else TextDecoration.None
+                color = if (todo.isCompleted) TextMuted else TextPrimary,
+                textDecoration = if (todo.isCompleted) TextDecoration.LineThrough else TextDecoration.None
             )
 
             if (todo.dueDate.isNotBlank() && todo.dueDate != "None") {

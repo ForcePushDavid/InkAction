@@ -13,7 +13,8 @@ data class NoteDto(
     @SerializedName("title") val title: String = "Untitled S-Pen Note",
     @SerializedName("summary") val summary: String = "",
     @SerializedName("markdown") val markdown: String = "",
-    @SerializedName("tags") val tags: List<String> = emptyList()
+    @SerializedName("tags") val tags: List<String> = emptyList(),
+    @SerializedName("timestamp") val timestamp: Long = System.currentTimeMillis()
 )
 
 data class TodoDto(

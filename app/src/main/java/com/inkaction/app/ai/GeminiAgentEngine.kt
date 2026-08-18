@@ -29,7 +29,7 @@ class GeminiAgentEngine(
     /**
      * Executes multi-agent multimodal processing on handwritten bitmap
      */
-    fun processInkBitmap(bitmap: Bitmap): Flow<AgentPipelineStatus> = flow {
+    fun processInkBitmap(bitmap: Bitmap, language: String): Flow<AgentPipelineStatus> = flow {
         if (apiKey.isBlank()) {
             emit(AgentPipelineStatus.Processing("demo", "No API key configured - running Smart Demo..."))
             emit(runMockPipeline())
@@ -50,8 +50,12 @@ class GeminiAgentEngine(
 
             emit(AgentPipelineStatus.Processing("synthesizing", "Synthesizer Agent deciphering handwriting..."))
 
+            val currentDateTime = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
+            val languageInstruction = if (language != "Auto-detect") "Output language strictly MUST BE: $language" else "Auto-detect the language from the handwriting."
+            val fullPrompt = "${AgentPrompts.MULTI_AGENT_SYSTEM_PROMPT}\n\nCurrent Date and Time: $currentDateTime\nUse this current date and time for interpreting relative dates like 'tomorrow' or 'next friday', and include it in the synthesized note summary or title if appropriate.\n\nLanguage Directive: $languageInstruction"
+
             val inputContent = content {
-                text(AgentPrompts.MULTI_AGENT_SYSTEM_PROMPT)
+                text(fullPrompt)
                 image(bitmap)
             }
 

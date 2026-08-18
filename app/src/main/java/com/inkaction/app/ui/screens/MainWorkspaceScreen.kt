@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -87,7 +89,8 @@ fun MainWorkspaceScreen(
     val currentColor by viewModel.currentColor.collectAsState()
 
     val currentNote by viewModel.currentNote.collectAsState()
-    val todos by viewModel.todos.collectAsState()
+    val allNotes by viewModel.allNotes.collectAsState()
+    val todos by viewModel.allTodos.collectAsState()
     val events by viewModel.events.collectAsState()
 
     var selectedActionTab by remember { mutableIntStateOf(0) }
@@ -99,9 +102,10 @@ fun MainWorkspaceScreen(
             initialModel = viewModel.modelName,
             initialDebounceMs = viewModel.debounceDurationMs,
             initialReminders = viewModel.remindersEnabled,
+            initialLanguage = viewModel.noteLanguage,
             onDismiss = { showSettings = false },
-            onSave = { key, model, debounce, reminders ->
-                viewModel.saveSettings(key, model, debounce, reminders)
+            onSave = { key, model, debounce, reminders, language ->
+                viewModel.saveSettings(key, model, debounce, reminders, language)
                 showSettings = false
             }
         )
@@ -218,9 +222,15 @@ fun MainWorkspaceScreen(
                             selectedTab = selectedActionTab,
                             onTabSelected = { selectedActionTab = it },
                             note = currentNote,
+                            allNotes = allNotes,
                             todos = todos,
                             events = events,
-                            onToggleTodo = { viewModel.toggleTodo(it) }
+                            onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) },
+                            onResumeDrawing = { noteToResume -> 
+                                viewModel.loadNoteToCanvas(noteToResume)
+                                inkCanvasRef?.loadStrokes(noteToResume.strokes)
+                                phoneNavTab = 0
+                            }
                         )
                     }
                 }
@@ -240,9 +250,15 @@ fun MainWorkspaceScreen(
                             selectedTab = selectedActionTab,
                             onTabSelected = { selectedActionTab = it },
                             note = currentNote,
+                            allNotes = allNotes,
                             todos = todos,
                             events = events,
-                            onToggleTodo = { viewModel.toggleTodo(it) }
+                            onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) },
+                            onResumeDrawing = { noteToResume -> 
+                                viewModel.loadNoteToCanvas(noteToResume)
+                                inkCanvasRef?.loadStrokes(noteToResume.strokes)
+                                phoneNavTab = 0
+                            }
                         )
                     }
                 }
@@ -291,29 +307,38 @@ fun CanvasPaneContent(
     onCanvasCreated: (InkCanvasView) -> Unit
 ) {
     var canvasViewRef by remember { mutableStateOf<InkCanvasView?>(null) }
+    val scrollState = androidx.compose.foundation.rememberScrollState()
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Native S-Pen Canvas View
-        AndroidView(
-            factory = { context ->
-                InkCanvasView(context).apply {
-                    this.loadStrokes(viewModel.currentStrokes)
-                    this.onStrokeStarted = { viewModel.onStrokeStarted() }
-                    this.onStrokeFinished = { count ->
-                        viewModel.currentStrokes.clear()
-                        viewModel.currentStrokes.addAll(this.strokes)
-                        viewModel.onStrokeFinished(count) { createOcrBitmap() }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+        ) {
+            // Native S-Pen Canvas View
+            AndroidView(
+                factory = { context ->
+                    InkCanvasView(context).apply {
+                        this.loadStrokes(viewModel.currentStrokes)
+                        this.onStrokeStarted = { viewModel.onStrokeStarted() }
+                        this.onStrokeFinished = { count ->
+                            viewModel.currentStrokes.clear()
+                            viewModel.currentStrokes.addAll(this.strokes)
+                            viewModel.onStrokeFinished(count) { createOcrBitmap() }
+                        }
+                        canvasViewRef = this
+                        onCanvasCreated(this)
                     }
-                    canvasViewRef = this
-                    onCanvasCreated(this)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3000.dp),
+                update = { view ->
+                    view.currentTool = currentTool
+                    view.currentColor = currentColor
                 }
-            },
-            modifier = Modifier.fillMaxSize(),
-            update = { view ->
-                view.currentTool = currentTool
-                view.currentColor = currentColor
-            }
-        )
+            )
+        }
 
         // Floating Pen Toolbar
         FloatingToolbar(
@@ -469,20 +494,22 @@ fun ActionsPaneContent(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
     note: com.inkaction.app.ai.NoteDto?,
-    todos: List<com.inkaction.app.ai.TodoDto>,
+    allNotes: List<com.inkaction.app.data.SavedNote>,
+    todos: List<com.inkaction.app.data.SavedTodo>,
     events: List<com.inkaction.app.ai.EventDto>,
-    onToggleTodo: (String) -> Unit
+    onToggleTodo: (String, Boolean) -> Unit,
+    onResumeDrawing: (com.inkaction.app.data.SavedNote) -> Unit
 ) {
     val tabTitles = listOf("Notes", "Todos", "Calendar")
 
     Column(modifier = Modifier.fillMaxSize()) {
         TabRow(
             selectedTabIndex = selectedTab,
-            containerColor = BgSurface,
+            containerColor = BgDark,
             contentColor = TextPrimary,
             indicator = { tabPositions ->
-                TabRowDefaults.Indicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                TabRowDefaults.SecondaryIndicator(
+                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
                     color = AccentBlue
                 )
             }
@@ -491,20 +518,13 @@ fun ActionsPaneContent(
                 Tab(
                     selected = selectedTab == index,
                     onClick = { onTabSelected(index) },
-                    text = {
-                        Text(
-                            text = title,
-                            fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selectedTab == index) TextPrimary else TextMuted
-                        )
-                    }
+                    text = { Text(title, fontWeight = FontWeight.Bold) }
                 )
             }
         }
-
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when (selectedTab) {
-                0 -> NotesScreen(note = note)
+                0 -> NotesScreen(note = note, allNotes = allNotes, onResumeDrawing = onResumeDrawing)
                 1 -> TodosScreen(todos = todos, onToggleTodo = onToggleTodo)
                 2 -> CalendarScreen(events = events)
             }

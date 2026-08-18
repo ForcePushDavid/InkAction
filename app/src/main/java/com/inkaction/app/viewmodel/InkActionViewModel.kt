@@ -12,6 +12,7 @@ import com.inkaction.app.ai.GeminiAgentEngine
 import com.inkaction.app.ai.NoteDto
 import com.inkaction.app.ai.TodoDto
 import com.inkaction.app.data.NoteStorageManager
+import com.inkaction.app.data.SavedNote
 import com.inkaction.app.data.SavedTodo
 import com.inkaction.app.ui.canvas.ToolType
 import kotlinx.coroutines.Job
@@ -50,11 +51,12 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     private val _pipelineStatus = MutableStateFlow<AgentPipelineStatus>(AgentPipelineStatus.Idle)
     val pipelineStatus: StateFlow<AgentPipelineStatus> = _pipelineStatus.asStateFlow()
 
+    val allNotes: StateFlow<List<SavedNote>> = storageManager.notesFlow
+
     private val _currentNote = MutableStateFlow<NoteDto?>(null)
     val currentNote: StateFlow<NoteDto?> = _currentNote.asStateFlow()
 
-    private val _todos = MutableStateFlow<List<TodoDto>>(emptyList())
-    val todos: StateFlow<List<TodoDto>> = _todos.asStateFlow()
+    val allTodos: StateFlow<List<SavedTodo>> = storageManager.todosFlow
 
     private val _events = MutableStateFlow<List<EventDto>>(emptyList())
     val events: StateFlow<List<EventDto>> = _events.asStateFlow()
@@ -63,6 +65,8 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     var debounceDurationMs: Long = 600000L // Default 10 minutes
         private set
     var remindersEnabled: Boolean = false
+        private set
+    var noteLanguage: String = "Auto-detect"
         private set
 
     var apiKey: String = ""
@@ -78,6 +82,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         apiKey = prefs.getString("api_key", "") ?: ""
         modelName = prefs.getString("model_name", "gemini-3.5-flash-lite") ?: "gemini-3.5-flash-lite"
         remindersEnabled = prefs.getBoolean("reminders_enabled", false)
+        noteLanguage = prefs.getString("note_language", "Auto-detect") ?: "Auto-detect"
         // Natvrdo nastavíme 10 minut, aby se přepsaly případné starší uložené hodnoty
         debounceDurationMs = 600000L 
         prefs.edit().putLong("debounce_ms", 600000L).apply()
@@ -85,17 +90,19 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         geminiEngine.updateConfig(apiKey, modelName)
     }
 
-    fun saveSettings(newKey: String, newModel: String, newDebounce: Long, reminders: Boolean) {
+    fun saveSettings(newKey: String, newModel: String, newDebounce: Long, reminders: Boolean, language: String) {
         apiKey = newKey
         modelName = newModel
         debounceDurationMs = 600000L // Keep hardcoded 10 mins
         remindersEnabled = reminders
+        noteLanguage = language
 
         prefs.edit()
             .putString("api_key", newKey)
             .putString("model_name", newModel)
             .putLong("debounce_ms", 600000L)
             .putBoolean("reminders_enabled", reminders)
+            .putString("note_language", language)
             .apply()
 
         geminiEngine.updateConfig(newKey, newModel)
@@ -158,13 +165,12 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         _autoPushState.value = AutoPushUiState(isProcessing = true)
 
         viewModelScope.launch {
-            geminiEngine.processInkBitmap(bitmap).collect { status ->
+            geminiEngine.processInkBitmap(bitmap, noteLanguage).collect { status ->
                 _pipelineStatus.value = status
 
                 if (status is AgentPipelineStatus.Success) {
                     val res = status.response
                     _currentNote.value = res.note
-                    _todos.value = res.todos
                     _events.value = res.events
                     _autoPushState.value = AutoPushUiState(isProcessing = false)
 
@@ -198,17 +204,22 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun toggleTodo(todoId: String) {
-        val updated = _todos.value.map {
-            if (it.id == todoId) it.copy(completed = !it.completed) else it
+    fun toggleTodo(todoId: String, currentStatus: Boolean) {
+        viewModelScope.launch {
+            storageManager.updateTodoCompletion(todoId, !currentStatus)
         }
-        _todos.value = updated
-        val todo = updated.find { it.id == todoId }
-        if (todo != null) {
-            viewModelScope.launch {
-                storageManager.updateTodoCompletion(todoId, todo.completed)
-            }
-        }
+    }
+
+    fun loadNoteToCanvas(note: SavedNote) {
+        currentStrokes.clear()
+        currentStrokes.addAll(note.strokes)
+        _currentNote.value = NoteDto(
+            title = note.title,
+            summary = note.summary,
+            markdown = note.markdown,
+            tags = note.tags,
+            timestamp = note.timestamp
+        )
     }
 
     fun cancelCountdown() {

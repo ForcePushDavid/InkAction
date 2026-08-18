@@ -24,6 +24,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Print
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,11 +39,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inkaction.app.ai.NoteDto
+import com.inkaction.app.data.SavedNote
+import com.inkaction.app.ui.theme.AccentBlue
 import com.inkaction.app.ui.theme.AccentCyan
 import com.inkaction.app.ui.theme.AccentPurple
 import com.inkaction.app.ui.theme.BgSurface
 import com.inkaction.app.ui.theme.BgTertiary
-import com.inkaction.app.ui.theme.BorderColor
 import com.inkaction.app.ui.theme.TextMuted
 import com.inkaction.app.ui.theme.TextPrimary
 import com.inkaction.app.ui.theme.TextSecondary
@@ -50,161 +53,234 @@ import com.inkaction.app.ui.theme.TextSecondary
 @Composable
 fun NotesScreen(
     note: NoteDto?,
+    allNotes: List<SavedNote>,
+    onResumeDrawing: (SavedNote) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-
-    if (note == null) {
-        Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.EditNote,
-                    contentDescription = null,
-                    tint = TextMuted,
-                    modifier = Modifier.size(48.dp)
-                )
-                Text(
-                    text = "Write with your S-Pen",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary
-                )
-                Text(
-                    text = "When you finish writing on your Tab S9 or S26 Ultra, InkAction synthesizes clean markdown notes here.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextMuted,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-            }
-        }
-        return
-    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Card Container
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(BgSurface)
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+        if (note != null) {
+            Text("Aktivní poznámka", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            NoteCard(note = note, context = context)
+        } else if (allNotes.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxWidth().height(200.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.EditNote,
+                        contentDescription = null,
+                        tint = TextMuted,
+                        modifier = Modifier.size(48.dp)
+                    )
                     Text(
-                        text = note.title,
-                        style = MaterialTheme.typography.titleLarge,
+                        text = "Knihovna poznámek je prázdná",
+                        style = MaterialTheme.typography.titleMedium,
                         color = TextPrimary
                     )
-                    Text(
-                        text = "Synthesized from S-Pen ink",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextMuted
+                }
+            }
+        }
+
+        if (allNotes.isNotEmpty()) {
+            Text("Historie (Knihovna)", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            allNotes.forEach { savedNote ->
+                SavedNoteCard(savedNote = savedNote, context = context, onResumeDrawing = { onResumeDrawing(savedNote) })
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun NoteCard(note: NoteDto, context: Context) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(BgSurface)
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = note.title.ifBlank { "Nová poznámka" },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+
+                val sdf = java.text.SimpleDateFormat("dd. MM. yyyy, HH:mm", java.util.Locale.getDefault())
+                val dateString = sdf.format(java.util.Date(note.timestamp))
+
+                Text(
+                    text = "Syntetizováno: $dateString",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextMuted
+                )
+            }
+
+            Row {
+                IconButton(
+                    onClick = {
+                        com.inkaction.app.util.PdfExportUtil.exportNoteToPdf(
+                            context,
+                            note.title,
+                            "${note.summary}\n\n${note.markdown}"
+                        )
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Print,
+                        contentDescription = "Export to PDF",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
-                Row {
-                    IconButton(
-                        onClick = {
-                            com.inkaction.app.util.PdfExportUtil.exportNoteToPdf(
-                                context,
-                                note.title,
-                                "${note.summary}\n\n${note.markdown}"
-                            )
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Print,
-                            contentDescription = "Export to PDF",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
+                IconButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText("Synthesized Note", "# ${note.title}\n\n${note.summary}\n\n${note.markdown}")
+                        clipboard.setPrimaryClip(clip)
+                        Toast.makeText(context, "Note copied to clipboard!", Toast.LENGTH_SHORT).show()
                     }
-
-                    IconButton(
-                        onClick = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clip = ClipData.newPlainText("Synthesized Note", "# ${note.title}\n\n${note.summary}\n\n${note.markdown}")
-                            clipboard.setPrimaryClip(clip)
-                            Toast.makeText(context, "Note copied to clipboard!", Toast.LENGTH_SHORT).show()
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copy Note",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
-
-            if (note.summary.isNotBlank()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(AccentCyan.copy(alpha = 0.1f))
-                        .padding(12.dp)
                 ) {
-                    Text(
-                        text = note.summary,
-                        fontSize = 13.sp,
-                        color = AccentCyan,
-                        lineHeight = 18.sp
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "Copy Note",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(14.dp))
+        if (note.summary.isNotBlank()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(AccentCyan.copy(alpha = 0.1f))
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = note.summary,
+                    fontSize = 13.sp,
+                    color = AccentCyan,
+                    lineHeight = 18.sp
+                )
+            }
+        }
 
-            // Body
-            Text(
-                text = note.markdown,
-                fontSize = 14.sp,
-                color = TextSecondary,
-                lineHeight = 22.sp
-            )
+        Spacer(modifier = Modifier.height(14.dp))
 
-            if (note.tags.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    note.tags.forEach { tag ->
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(BgTertiary)
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "#$tag",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = AccentPurple
-                            )
-                        }
+        Text(
+            text = note.markdown,
+            fontSize = 14.sp,
+            color = TextSecondary,
+            lineHeight = 22.sp
+        )
+
+        if (note.tags.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                note.tags.forEach { tag ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(BgTertiary)
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "#$tag",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AccentPurple
+                        )
                     }
                 }
             }
         }
     }
 }
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun SavedNoteCard(savedNote: SavedNote, context: Context, onResumeDrawing: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(BgSurface)
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = savedNote.title.ifBlank { "Nová poznámka" },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+
+                val sdf = java.text.SimpleDateFormat("dd. MM. yyyy, HH:mm", java.util.Locale.getDefault())
+                val dateString = sdf.format(java.util.Date(savedNote.timestamp))
+
+                Text(
+                    text = "Syntetizováno: $dateString",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextMuted
+                )
+            }
+            Button(
+                onClick = onResumeDrawing,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+            ) {
+                Text("Kreslit")
+            }
+        }
+
+        if (savedNote.summary.isNotBlank()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(AccentCyan.copy(alpha = 0.1f))
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = savedNote.summary,
+                    fontSize = 13.sp,
+                    color = AccentCyan,
+                    lineHeight = 18.sp
+                )
+            }
+        }
+    }
+}
+
