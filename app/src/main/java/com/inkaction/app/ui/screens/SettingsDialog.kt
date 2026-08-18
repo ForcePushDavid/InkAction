@@ -44,14 +44,16 @@ fun SettingsDialog(
     initialDebounceMs: Long,
     initialReminders: Boolean,
     initialLanguage: String,
+    initialThemeMode: String,
     onDismiss: () -> Unit,
-    onSave: (apiKey: String, model: String, debounceMs: Long, reminders: Boolean, language: String) -> Unit
+    onSave: (apiKey: String, model: String, debounceMs: Long, reminders: Boolean, language: String, themeMode: String) -> Unit
 ) {
     var apiKey by remember { mutableStateOf(initialApiKey) }
     var model by remember { mutableStateOf(initialModel.ifBlank { "gemini-3.5-flash-lite" }) }
     var debounceMs by remember { mutableStateOf(initialDebounceMs) }
     var remindersEnabled by remember { mutableStateOf(initialReminders) }
     var language by remember { mutableStateOf(initialLanguage) }
+    var themeMode by remember { mutableStateOf(initialThemeMode) }
     var modelExpanded by remember { mutableStateOf(false) }
     var languageExpanded by remember { mutableStateOf(false) }
 
@@ -168,6 +170,28 @@ fun SettingsDialog(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Theme selection
+            Text(text = "Vzhled aplikace", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("system" to "Systém", "dark" to "Tmavý", "light" to "Světlý").forEach { (value, label) ->
+                    Button(
+                        onClick = { themeMode = value },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (themeMode == value) AccentBlue else BgSurface,
+                            contentColor = if (themeMode == value) androidx.compose.ui.graphics.Color.White else TextPrimary
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (themeMode == value) AccentBlue else com.inkaction.app.ui.theme.BorderColor)
+                    ) {
+                        Text(label, fontSize = 12.sp)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -193,7 +217,7 @@ fun SettingsDialog(
                     Text("Zrušit", color = TextMuted)
                 }
                 Button(
-                    onClick = { onSave(apiKey, model, debounceMs, remindersEnabled, language) },
+                    onClick = { onSave(apiKey, model, debounceMs, remindersEnabled, language, themeMode) },
                     colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
                 ) {
                     Text("Uložit a použít")

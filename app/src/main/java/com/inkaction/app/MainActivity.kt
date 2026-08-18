@@ -20,7 +20,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         setContent {
-            InkActionTheme {
+            val themeMode = viewModel.themeMode
+            val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+            val isDarkTheme = when (themeMode) {
+                "light" -> false
+                "dark" -> true
+                else -> isSystemDark
+            }
+            
+            InkActionTheme(isDarkTheme = isDarkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = BgDark

@@ -21,6 +21,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 data class AutoPushUiState(
     val isArmed: Boolean = false,
@@ -73,6 +76,8 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         private set
     var modelName: String = "gemini-3.5-flash-lite"
         private set
+    var themeMode by mutableStateOf("system") // "system", "dark", "light"
+        private set
 
     init {
         loadSettings()
@@ -83,6 +88,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         modelName = prefs.getString("model_name", "gemini-3.5-flash-lite") ?: "gemini-3.5-flash-lite"
         remindersEnabled = prefs.getBoolean("reminders_enabled", false)
         noteLanguage = prefs.getString("note_language", "Auto-detect") ?: "Auto-detect"
+        themeMode = prefs.getString("theme_mode", "system") ?: "system"
         // Natvrdo nastavíme 10 minut, aby se přepsaly případné starší uložené hodnoty
         debounceDurationMs = 600000L 
         prefs.edit().putLong("debounce_ms", 600000L).apply()
@@ -90,12 +96,13 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         geminiEngine.updateConfig(apiKey, modelName)
     }
 
-    fun saveSettings(newKey: String, newModel: String, newDebounce: Long, reminders: Boolean, language: String) {
+    fun saveSettings(newKey: String, newModel: String, newDebounce: Long, reminders: Boolean, language: String, newThemeMode: String) {
         apiKey = newKey
         modelName = newModel
         debounceDurationMs = 600000L // Keep hardcoded 10 mins
         remindersEnabled = reminders
         noteLanguage = language
+        themeMode = newThemeMode
 
         prefs.edit()
             .putString("api_key", newKey)
@@ -103,6 +110,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
             .putLong("debounce_ms", 600000L)
             .putBoolean("reminders_enabled", reminders)
             .putString("note_language", language)
+            .putString("theme_mode", newThemeMode)
             .apply()
 
         geminiEngine.updateConfig(newKey, newModel)
@@ -219,6 +227,12 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     fun deleteNote(noteId: Long) {
         viewModelScope.launch {
             storageManager.deleteNote(noteId)
+        }
+    }
+
+    fun toggleNotePin(noteId: Long) {
+        viewModelScope.launch {
+            storageManager.toggleNotePin(noteId)
         }
     }
 

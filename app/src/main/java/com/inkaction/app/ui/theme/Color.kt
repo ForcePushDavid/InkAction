@@ -18,3 +18,12 @@ val AccentEmerald = Color(0xFF34D399)
 val AccentAmber = Color(0xFFD29922)
 val AccentRed = Color(0xFFDA3633)
 val AccentPurple = Color(0xFFA371F7)
+
+// Light Theme
+val LightBgDark = Color(0xFFF6F8FA)
+val LightBgSurface = Color(0xFFFFFFFF)
+val LightBgTertiary = Color(0xFFEEF0F2)
+val LightBorderColor = Color(0xFFD0D7DE)
+val LightTextPrimary = Color(0xFF1F2328)
+val LightTextSecondary = Color(0xFF656D76)
+val LightTextMuted = Color(0xFF8C959F)

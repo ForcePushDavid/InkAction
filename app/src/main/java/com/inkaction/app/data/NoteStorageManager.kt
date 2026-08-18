@@ -17,7 +17,8 @@ data class SavedNote(
     val markdown: String,
     val tags: List<String> = emptyList(),
     val strokes: List<com.inkaction.app.ui.canvas.InkStroke> = emptyList(),
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val isPinned: Boolean = false
 )
 
 data class SavedTodo(
@@ -123,6 +124,18 @@ class NoteStorageManager(private val context: Context) {
 
     suspend fun deleteNote(noteId: Long) = withContext(Dispatchers.IO) {
         val currentList = _notesFlow.value.filter { it.id != noteId }
+        _notesFlow.value = currentList
+        try {
+            notesFile.writeText(gson.toJson(currentList))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun toggleNotePin(noteId: Long) = withContext(Dispatchers.IO) {
+        val currentList = _notesFlow.value.map {
+            if (it.id == noteId) it.copy(isPinned = !it.isPinned) else it
+        }
         _notesFlow.value = currentList
         try {
             notesFile.writeText(gson.toJson(currentList))

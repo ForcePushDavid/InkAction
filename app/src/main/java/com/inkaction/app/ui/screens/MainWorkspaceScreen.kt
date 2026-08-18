@@ -104,9 +104,10 @@ fun MainWorkspaceScreen(
             initialDebounceMs = viewModel.debounceDurationMs,
             initialReminders = viewModel.remindersEnabled,
             initialLanguage = viewModel.noteLanguage,
+            initialThemeMode = viewModel.themeMode,
             onDismiss = { showSettings = false },
-            onSave = { key, model, debounce, reminders, language ->
-                viewModel.saveSettings(key, model, debounce, reminders, language)
+            onSave = { key, model, debounce, reminders, language, themeMode ->
+                viewModel.saveSettings(key, model, debounce, reminders, language, themeMode)
                 showSettings = false
             }
         )
@@ -247,7 +248,8 @@ fun MainWorkspaceScreen(
                                 inkCanvasRef?.loadStrokes(noteToResume.strokes)
                                 phoneNavTab = 0
                             },
-                            onDeleteNote = { id -> viewModel.deleteNote(id) }
+                            onDeleteNote = { id -> viewModel.deleteNote(id) },
+                            onTogglePin = { id -> viewModel.toggleNotePin(id) }
                         )
                     }
                 }
@@ -277,7 +279,8 @@ fun MainWorkspaceScreen(
                                 inkCanvasRef?.loadStrokes(noteToResume.strokes)
                                 phoneNavTab = 0
                             },
-                            onDeleteNote = { id -> viewModel.deleteNote(id) }
+                            onDeleteNote = { id -> viewModel.deleteNote(id) },
+                            onTogglePin = { id -> viewModel.toggleNotePin(id) }
                         )
                     }
                 }
@@ -519,7 +522,8 @@ fun ActionsPaneContent(
     onToggleTodo: (String, Boolean) -> Unit,
     onDeleteTodo: (String) -> Unit,
     onResumeDrawing: (com.inkaction.app.data.SavedNote) -> Unit,
-    onDeleteNote: (Long) -> Unit
+    onDeleteNote: (Long) -> Unit,
+    onTogglePin: (Long) -> Unit
 ) {
     val tabTitles = listOf("Notes", "Todos", "Calendar")
 
@@ -545,7 +549,13 @@ fun ActionsPaneContent(
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when (selectedTab) {
-                0 -> NotesScreen(note = note, allNotes = allNotes, onResumeDrawing = onResumeDrawing, onDeleteNote = onDeleteNote)
+                0 -> NotesScreen(
+                    note = note, 
+                    allNotes = allNotes, 
+                    onResumeDrawing = onResumeDrawing, 
+                    onDeleteNote = onDeleteNote,
+                    onTogglePin = onTogglePin
+                )
                 1 -> TodosScreen(todos = todos, onToggleTodo = onToggleTodo, onDeleteTodo = onDeleteTodo)
                 2 -> CalendarScreen(events = events)
             }

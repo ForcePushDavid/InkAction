@@ -5,6 +5,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,13 +27,21 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,9 +67,26 @@ fun NotesScreen(
     allNotes: List<SavedNote>,
     onResumeDrawing: (SavedNote) -> Unit,
     onDeleteNote: (Long) -> Unit,
+    onTogglePin: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedTag by remember { mutableStateOf<String?>(null) }
+    
+    val allTags = allNotes.flatMap { it.tags }.distinct().sorted()
+    
+    val filteredNotes = allNotes.filter { savedNote ->
+        val matchesSearch = searchQuery.isBlank() || 
+            savedNote.title.contains(searchQuery, ignoreCase = true) ||
+            savedNote.summary.contains(searchQuery, ignoreCase = true) ||
+            savedNote.markdown.contains(searchQuery, ignoreCase = true) ||
+            savedNote.tags.any { it.contains(searchQuery, ignoreCase = true) }
+            
+        val matchesTag = selectedTag == null || savedNote.tags.contains(selectedTag)
+        
+        matchesSearch && matchesTag
+    }.sortedWith(compareByDescending<SavedNote> { it.isPinned }.thenByDescending { it.timestamp })
 
     Column(
         modifier = modifier
@@ -69,40 +96,84 @@ fun NotesScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (note != null) {
-            Text("AktivnÄ‚Â­ poznÄ‚Ë‡mka", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("Aktivní poznámka", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             NoteCard(note = note, context = context)
-        } else if (allNotes.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxWidth().height(200.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+        } 
+        
+        if (allNotes.isEmpty()) {
+            if (note == null) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.EditNote,
-                        contentDescription = null,
-                        tint = TextMuted,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Text(
-                        text = "Knihovna poznÄ‚Ë‡mek je prÄ‚Ë‡zdnÄ‚Ë‡",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.EditNote,
+                            contentDescription = null,
+                            tint = TextMuted,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Text(
+                            text = "Knihovna poznámek je prázdná",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextPrimary
+                        )
+                    }
                 }
             }
-        }
-
-        if (allNotes.isNotEmpty()) {
+        } else {
             Text("Historie (Knihovna)", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            allNotes.forEach { savedNote ->
+            
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Hledat poznámky...") },
+                leadingIcon = {
+                    Icon(imageVector = Icons.Default.Search, contentDescription = "Search")
+                },
+                singleLine = true
+            )
+            
+            if (allTags.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    allTags.forEach { tag ->
+                        val isSelected = tag == selectedTag
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(if (isSelected) AccentPurple else BgTertiary)
+                                .clickable { 
+                                    if (isSelected) selectedTag = null else selectedTag = tag
+                                }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "#$tag",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isSelected) BgSurface else AccentPurple
+                            )
+                        }
+                    }
+                }
+            }
+            
+            filteredNotes.forEach { savedNote ->
                 SavedNoteCard(
                     savedNote = savedNote, 
                     context = context, 
                     onResumeDrawing = { onResumeDrawing(savedNote) },
-                    onDeleteNote = { onDeleteNote(savedNote.id) }
+                    onDeleteNote = { onDeleteNote(savedNote.id) },
+                    onTogglePin = { onTogglePin(savedNote.id) }
                 )
             }
         }
@@ -233,7 +304,13 @@ fun NoteCard(note: NoteDto, context: Context) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SavedNoteCard(savedNote: SavedNote, context: Context, onResumeDrawing: () -> Unit, onDeleteNote: () -> Unit) {
+fun SavedNoteCard(
+    savedNote: SavedNote, 
+    context: Context, 
+    onResumeDrawing: () -> Unit, 
+    onDeleteNote: () -> Unit,
+    onTogglePin: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -264,6 +341,13 @@ fun SavedNoteCard(savedNote: SavedNote, context: Context, onResumeDrawing: () ->
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onTogglePin, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        imageVector = if (savedNote.isPinned) Icons.Default.PushPin else Icons.Outlined.PushPin, 
+                        contentDescription = if (savedNote.isPinned) "Odepnout" else "Připnout", 
+                        tint = if (savedNote.isPinned) AccentPurple else TextMuted
+                    )
+                }
                 IconButton(onClick = onDeleteNote, modifier = Modifier.size(36.dp)) {
                     Icon(imageVector = Icons.Default.Delete, contentDescription = "Smazat", tint = TextMuted)
                 }
@@ -295,4 +379,3 @@ fun SavedNoteCard(savedNote: SavedNote, context: Context, onResumeDrawing: () ->
         }
     }
 }
-
