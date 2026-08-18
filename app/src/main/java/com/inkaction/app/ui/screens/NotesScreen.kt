@@ -69,7 +69,7 @@ fun NotesScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (note != null) {
-            Text("AktivnĂ­ poznĂˇmka", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("AktivnÄ‚Â­ poznÄ‚Ë‡mka", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             NoteCard(note = note, context = context)
         } else if (allNotes.isEmpty()) {
             Box(
@@ -87,7 +87,7 @@ fun NotesScreen(
                         modifier = Modifier.size(48.dp)
                     )
                     Text(
-                        text = "Knihovna poznĂˇmek je prĂˇzdnĂˇ",
+                        text = "Knihovna poznÄ‚Ë‡mek je prÄ‚Ë‡zdnÄ‚Ë‡",
                         style = MaterialTheme.typography.titleMedium,
                         color = TextPrimary
                     )
@@ -126,7 +126,7 @@ fun NoteCard(note: NoteDto, context: Context) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = note.title.ifBlank { "NovĂˇ poznĂˇmka" },
+                    text = note.title.ifBlank { "Nová poznámka" },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -136,7 +136,7 @@ fun NoteCard(note: NoteDto, context: Context) {
                 val dateString = sdf.format(java.util.Date(note.timestamp))
 
                 Text(
-                    text = "SyntetizovĂˇno: $dateString",
+                    text = "Syntetizováno: $dateString",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextMuted
                 )
@@ -248,7 +248,7 @@ fun SavedNoteCard(savedNote: SavedNote, context: Context, onResumeDrawing: () ->
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = savedNote.title.ifBlank { "NovĂˇ poznĂˇmka" },
+                    text = savedNote.title.ifBlank { "Nová poznámka" },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -258,7 +258,7 @@ fun SavedNoteCard(savedNote: SavedNote, context: Context, onResumeDrawing: () ->
                 val dateString = sdf.format(java.util.Date(savedNote.timestamp))
 
                 Text(
-                    text = "SyntetizovĂˇno: $dateString",
+                    text = "Syntetizováno: $dateString",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextMuted
                 )
