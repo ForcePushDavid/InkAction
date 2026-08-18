@@ -210,6 +210,18 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun deleteTodo(todoId: String) {
+        viewModelScope.launch {
+            storageManager.deleteTodo(todoId)
+        }
+    }
+
+    fun deleteNote(noteId: Long) {
+        viewModelScope.launch {
+            storageManager.deleteNote(noteId)
+        }
+    }
+
     fun loadNoteToCanvas(note: SavedNote) {
         currentStrokes.clear()
         currentStrokes.addAll(note.strokes)
@@ -220,6 +232,11 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
             tags = note.tags,
             timestamp = note.timestamp
         )
+    }
+
+    fun createNewNote() {
+        currentStrokes.clear()
+        _currentNote.value = null
     }
 
     fun cancelCountdown() {

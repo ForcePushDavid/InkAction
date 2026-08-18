@@ -110,6 +110,27 @@ class NoteStorageManager(private val context: Context) {
         }
     }
 
+    suspend fun deleteTodo(todoId: String) = withContext(Dispatchers.IO) {
+        val currentList = _todosFlow.value.filter { it.id != todoId }
+        _todosFlow.value = currentList
+        try {
+            todosFile.writeText(gson.toJson(currentList))
+            updateWidget()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun deleteNote(noteId: Long) = withContext(Dispatchers.IO) {
+        val currentList = _notesFlow.value.filter { it.id != noteId }
+        _notesFlow.value = currentList
+        try {
+            notesFile.writeText(gson.toJson(currentList))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun updateWidget() {
         try {
             val intent = android.content.Intent(context, com.inkaction.app.widget.TodoWidgetProvider::class.java).apply {

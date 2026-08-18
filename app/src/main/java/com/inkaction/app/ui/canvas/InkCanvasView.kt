@@ -99,6 +99,7 @@ class InkCanvasView @JvmOverloads constructor(
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                parent?.requestDisallowInterceptTouchEvent(true)
                 onStrokeStarted?.invoke()
                 if (effectiveTool == ToolType.ERASER) {
                     if (eraseIntersections(x, y)) invalidate()
@@ -148,6 +149,7 @@ class InkCanvasView @JvmOverloads constructor(
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                parent?.requestDisallowInterceptTouchEvent(false)
                 if (effectiveTool == ToolType.ERASER) {
                     onStrokeFinished?.invoke(strokes.size)
                 } else {

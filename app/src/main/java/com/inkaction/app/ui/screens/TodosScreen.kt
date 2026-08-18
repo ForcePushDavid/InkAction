@@ -1,4 +1,4 @@
-package com.inkaction.app.ui.screens
+﻿package com.inkaction.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,9 +21,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,14 +34,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.inkaction.app.ai.TodoDto
 import com.inkaction.app.data.SavedTodo
 import com.inkaction.app.ui.theme.AccentAmber
 import com.inkaction.app.ui.theme.AccentBlue
-import com.inkaction.app.ui.theme.AccentGreen
 import com.inkaction.app.ui.theme.AccentRed
 import com.inkaction.app.ui.theme.BgSurface
-import com.inkaction.app.ui.theme.BorderColor
 import com.inkaction.app.ui.theme.TextMuted
 import com.inkaction.app.ui.theme.TextPrimary
 import com.inkaction.app.ui.theme.TextSecondary
@@ -50,6 +47,7 @@ import com.inkaction.app.ui.theme.TextSecondary
 fun TodosScreen(
     todos: List<SavedTodo>,
     onToggleTodo: (String, Boolean) -> Unit,
+    onDeleteTodo: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (todos.isEmpty()) {
@@ -69,20 +67,17 @@ fun TodosScreen(
                     modifier = Modifier.size(48.dp)
                 )
                 Text(
-                    text = "No pending action items",
+                    text = "Žádné úkoly",
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary
-                )
-                Text(
-                    text = "Checklists, tasks, and follow-ups detected in your handwriting appear here.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextMuted,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             }
         }
         return
     }
+
+    val activeTodos = todos.filter { !it.isCompleted }.sortedByDescending { it.timestamp }
+    val completedTodos = todos.filter { it.isCompleted }.sortedByDescending { it.timestamp }
 
     LazyColumn(
         modifier = modifier
@@ -90,16 +85,52 @@ fun TodosScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        items(todos, key = { it.id }) { todo ->
-            TodoCard(todo = todo, onToggle = { onToggleTodo(todo.id, todo.isCompleted) })
+        if (activeTodos.isNotEmpty()) {
+            item {
+                Text(
+                    text = "Aktivní úkoly",
+                    color = TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+            items(activeTodos, key = { it.id }) { todo ->
+                TodoCard(
+                    todo = todo, 
+                    onToggle = { onToggleTodo(todo.id, todo.isCompleted) },
+                    onDelete = { onDeleteTodo(todo.id) }
+                )
+            }
+        }
+
+        if (completedTodos.isNotEmpty()) {
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Historie (Dokončené)",
+                    color = TextMuted,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+            items(completedTodos, key = { it.id }) { todo ->
+                TodoCard(
+                    todo = todo, 
+                    onToggle = { onToggleTodo(todo.id, todo.isCompleted) },
+                    onDelete = { onDeleteTodo(todo.id) }
+                )
+            }
         }
     }
 }
 
 @Composable
 fun TodoCard(
-    todo: com.inkaction.app.data.SavedTodo,
-    onToggle: () -> Unit
+    todo: SavedTodo,
+    onToggle: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val isDone = todo.isCompleted
     val priorityColor = when (todo.priority.lowercase()) {
@@ -112,27 +143,26 @@ fun TodoCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(if (todo.isCompleted) BgSurface.copy(alpha = 0.3f) else BgSurface)
+            .background(if (isDone) BgSurface.copy(alpha = 0.3f) else BgSurface)
             .clickable { onToggle() }
             .padding(vertical = 12.dp, horizontal = 16.dp),
-        verticalAlignment = Alignment.Top,
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Todoist style circular checkbox colored by priority
         Box(
             modifier = Modifier
-                .padding(top = 2.dp)
                 .size(20.dp)
                 .clip(androidx.compose.foundation.shape.CircleShape)
                 .border(
                     width = 2.dp, 
-                    color = if (todo.isCompleted) TextMuted else priorityColor, 
+                    color = if (isDone) TextMuted else priorityColor, 
                     shape = androidx.compose.foundation.shape.CircleShape
                 )
-                .background(if (todo.isCompleted) TextMuted else androidx.compose.ui.graphics.Color.Transparent),
+                .background(if (isDone) TextMuted else androidx.compose.ui.graphics.Color.Transparent),
             contentAlignment = Alignment.Center
         ) {
-            if (todo.isCompleted) {
+            if (isDone) {
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
@@ -147,8 +177,8 @@ fun TodoCard(
                 text = todo.text,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (todo.isCompleted) TextMuted else TextPrimary,
-                textDecoration = if (todo.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                color = if (isDone) TextMuted else TextPrimary,
+                textDecoration = if (isDone) TextDecoration.LineThrough else TextDecoration.None
             )
 
             if (todo.dueDate.isNotBlank() && todo.dueDate != "None") {
@@ -157,18 +187,31 @@ fun TodoCard(
                     Icon(
                         imageVector = Icons.Default.CalendarMonth,
                         contentDescription = null,
-                        tint = AccentRed,
+                        tint = if (isDone) TextMuted else AccentRed,
                         modifier = Modifier.size(12.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = todo.dueDate,
                         fontSize = 12.sp,
-                        color = AccentRed,
+                        color = if (isDone) TextMuted else AccentRed,
                         fontWeight = FontWeight.Medium
                     )
                 }
             }
         }
+        
+        IconButton(
+            onClick = onDelete,
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Smazat",
+                tint = TextMuted,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
+

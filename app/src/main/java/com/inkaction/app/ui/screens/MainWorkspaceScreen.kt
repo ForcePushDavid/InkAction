@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -147,6 +148,20 @@ fun MainWorkspaceScreen(
                 }
 
                 Row {
+                    IconButton(
+                        onClick = {
+                            viewModel.createNewNote()
+                            inkCanvasRef?.loadStrokes(emptyList())
+                            phoneNavTab = 0
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "New Note",
+                            tint = AccentCyan
+                        )
+                    }
+
                     var showMenu by remember { mutableStateOf(false) }
                     
                     Box {
@@ -226,11 +241,13 @@ fun MainWorkspaceScreen(
                             todos = todos,
                             events = events,
                             onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) },
+                            onDeleteTodo = { id -> viewModel.deleteTodo(id) },
                             onResumeDrawing = { noteToResume -> 
                                 viewModel.loadNoteToCanvas(noteToResume)
                                 inkCanvasRef?.loadStrokes(noteToResume.strokes)
                                 phoneNavTab = 0
-                            }
+                            },
+                            onDeleteNote = { id -> viewModel.deleteNote(id) }
                         )
                     }
                 }
@@ -254,11 +271,13 @@ fun MainWorkspaceScreen(
                             todos = todos,
                             events = events,
                             onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) },
+                            onDeleteTodo = { id -> viewModel.deleteTodo(id) },
                             onResumeDrawing = { noteToResume -> 
                                 viewModel.loadNoteToCanvas(noteToResume)
                                 inkCanvasRef?.loadStrokes(noteToResume.strokes)
                                 phoneNavTab = 0
-                            }
+                            },
+                            onDeleteNote = { id -> viewModel.deleteNote(id) }
                         )
                     }
                 }
@@ -498,7 +517,9 @@ fun ActionsPaneContent(
     todos: List<com.inkaction.app.data.SavedTodo>,
     events: List<com.inkaction.app.ai.EventDto>,
     onToggleTodo: (String, Boolean) -> Unit,
-    onResumeDrawing: (com.inkaction.app.data.SavedNote) -> Unit
+    onDeleteTodo: (String) -> Unit,
+    onResumeDrawing: (com.inkaction.app.data.SavedNote) -> Unit,
+    onDeleteNote: (Long) -> Unit
 ) {
     val tabTitles = listOf("Notes", "Todos", "Calendar")
 
@@ -524,8 +545,8 @@ fun ActionsPaneContent(
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when (selectedTab) {
-                0 -> NotesScreen(note = note, allNotes = allNotes, onResumeDrawing = onResumeDrawing)
-                1 -> TodosScreen(todos = todos, onToggleTodo = onToggleTodo)
+                0 -> NotesScreen(note = note, allNotes = allNotes, onResumeDrawing = onResumeDrawing, onDeleteNote = onDeleteNote)
+                1 -> TodosScreen(todos = todos, onToggleTodo = onToggleTodo, onDeleteTodo = onDeleteTodo)
                 2 -> CalendarScreen(events = events)
             }
         }

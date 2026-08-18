@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -55,6 +56,7 @@ fun NotesScreen(
     note: NoteDto?,
     allNotes: List<SavedNote>,
     onResumeDrawing: (SavedNote) -> Unit,
+    onDeleteNote: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -67,7 +69,7 @@ fun NotesScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (note != null) {
-            Text("Aktivn� pozn�mka", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("AktivnĂ­ poznĂˇmka", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             NoteCard(note = note, context = context)
         } else if (allNotes.isEmpty()) {
             Box(
@@ -85,7 +87,7 @@ fun NotesScreen(
                         modifier = Modifier.size(48.dp)
                     )
                     Text(
-                        text = "Knihovna pozn�mek je pr�zdn�",
+                        text = "Knihovna poznĂˇmek je prĂˇzdnĂˇ",
                         style = MaterialTheme.typography.titleMedium,
                         color = TextPrimary
                     )
@@ -96,7 +98,12 @@ fun NotesScreen(
         if (allNotes.isNotEmpty()) {
             Text("Historie (Knihovna)", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             allNotes.forEach { savedNote ->
-                SavedNoteCard(savedNote = savedNote, context = context, onResumeDrawing = { onResumeDrawing(savedNote) })
+                SavedNoteCard(
+                    savedNote = savedNote, 
+                    context = context, 
+                    onResumeDrawing = { onResumeDrawing(savedNote) },
+                    onDeleteNote = { onDeleteNote(savedNote.id) }
+                )
             }
         }
     }
@@ -119,7 +126,7 @@ fun NoteCard(note: NoteDto, context: Context) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = note.title.ifBlank { "Nov� pozn�mka" },
+                    text = note.title.ifBlank { "NovĂˇ poznĂˇmka" },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -129,7 +136,7 @@ fun NoteCard(note: NoteDto, context: Context) {
                 val dateString = sdf.format(java.util.Date(note.timestamp))
 
                 Text(
-                    text = "Syntetizov�no: $dateString",
+                    text = "SyntetizovĂˇno: $dateString",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextMuted
                 )
@@ -226,7 +233,7 @@ fun NoteCard(note: NoteDto, context: Context) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SavedNoteCard(savedNote: SavedNote, context: Context, onResumeDrawing: () -> Unit) {
+fun SavedNoteCard(savedNote: SavedNote, context: Context, onResumeDrawing: () -> Unit, onDeleteNote: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -241,7 +248,7 @@ fun SavedNoteCard(savedNote: SavedNote, context: Context, onResumeDrawing: () ->
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = savedNote.title.ifBlank { "Nov� pozn�mka" },
+                    text = savedNote.title.ifBlank { "NovĂˇ poznĂˇmka" },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -251,16 +258,21 @@ fun SavedNoteCard(savedNote: SavedNote, context: Context, onResumeDrawing: () ->
                 val dateString = sdf.format(java.util.Date(savedNote.timestamp))
 
                 Text(
-                    text = "Syntetizov�no: $dateString",
+                    text = "SyntetizovĂˇno: $dateString",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextMuted
                 )
             }
-            Button(
-                onClick = onResumeDrawing,
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
-            ) {
-                Text("Kreslit")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onDeleteNote, modifier = Modifier.size(36.dp)) {
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Smazat", tint = TextMuted)
+                }
+                Button(
+                    onClick = onResumeDrawing,
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+                ) {
+                    Text("Kreslit")
+                }
             }
         }
 
