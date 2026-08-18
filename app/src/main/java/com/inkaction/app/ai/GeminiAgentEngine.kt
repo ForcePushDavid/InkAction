@@ -17,7 +17,7 @@ import java.util.Locale
 
 class GeminiAgentEngine(
     private var apiKey: String = "",
-    private var modelName: String = "gemini-1.5-flash"
+    private var modelName: String = "gemini-3.7-flash"
 ) {
     private val gson = Gson()
 

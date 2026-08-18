@@ -44,9 +44,24 @@ fun SettingsDialog(
     onSave: (apiKey: String, model: String, debounceMs: Long) -> Unit
 ) {
     var apiKey by remember { mutableStateOf(initialApiKey) }
-    var model by remember { mutableStateOf(initialModel) }
+    var model by remember { mutableStateOf(initialModel.ifBlank { "gemini-3.7-flash" }) }
     var debounceMs by remember { mutableStateOf(initialDebounceMs) }
     var modelExpanded by remember { mutableStateOf(false) }
+
+    val presetModels = listOf(
+        "gemini-3.7-flash" to "Gemini 3.7 Flash (Flagship SOTA - Recommended)",
+        "gemini-3.6-flash" to "Gemini 3.6 Flash (High-Speed Multimodal)",
+        "gemini-3.5-flash" to "Gemini 3.5 Flash",
+        "gemini-3.5-flash-lite" to "Gemini 3.5 Flash Lite (Ultra Low Latency)",
+        "gemini-3.1-pro" to "Gemini 3.1 Pro (Deep Vision & Diagram Analysis)",
+        "gemini-3.1-flash-lite" to "Gemini 3.1 Flash Lite",
+        "gemini-3-flash" to "Gemini 3 Flash",
+        "gemini-2.5-flash" to "Gemini 2.5 Flash",
+        "gemini-2.5-flash-lite" to "Gemini 2.5 Flash Lite",
+        "gemini-2.5-pro" to "Gemini 2.5 Pro",
+        "gemini-2-flash" to "Gemini 2 Flash",
+        "gemini-2-flash-lite" to "Gemini 2 Flash Lite"
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -78,16 +93,15 @@ fun SettingsDialog(
                 color = TextMuted
             )
 
-            // Model Selection
+            // Editable Model Selection + Dropdown
             ExposedDropdownMenuBox(
                 expanded = modelExpanded,
                 onExpandedChange = { modelExpanded = !modelExpanded }
             ) {
                 OutlinedTextField(
                     value = model,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Gemini Model") },
+                    onValueChange = { model = it },
+                    label = { Text("Gemini Model (Type or Select)") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
                     modifier = Modifier
                         .menuAnchor()
@@ -97,18 +111,20 @@ fun SettingsDialog(
                     expanded = modelExpanded,
                     onDismissRequest = { modelExpanded = false }
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("gemini-1.5-flash (Fastest)") },
-                        onClick = { model = "gemini-1.5-flash"; modelExpanded = false }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("gemini-2.0-flash (Next-Gen)") },
-                        onClick = { model = "gemini-2.0-flash"; modelExpanded = false }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("gemini-1.5-pro (Deep Analysis)") },
-                        onClick = { model = "gemini-1.5-pro"; modelExpanded = false }
-                    )
+                    presetModels.forEach { (modelId, description) ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(text = modelId, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    Text(text = description, fontSize = 11.sp, color = TextMuted)
+                                }
+                            },
+                            onClick = {
+                                model = modelId
+                                modelExpanded = false
+                            }
+                        )
+                    }
                 }
             }
 

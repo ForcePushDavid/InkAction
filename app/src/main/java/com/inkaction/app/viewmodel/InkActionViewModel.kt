@@ -61,7 +61,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
 
     var apiKey: String = ""
         private set
-    var modelName: String = "gemini-1.5-flash"
+    var modelName: String = "gemini-3.7-flash"
         private set
 
     init {
@@ -70,7 +70,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun loadSettings() {
         apiKey = prefs.getString("api_key", "") ?: ""
-        modelName = prefs.getString("model_name", "gemini-1.5-flash") ?: "gemini-1.5-flash"
+        modelName = prefs.getString("model_name", "gemini-3.7-flash") ?: "gemini-3.7-flash"
         debounceDurationMs = prefs.getLong("debounce_ms", 6000L)
         geminiEngine.updateConfig(apiKey, modelName)
     }
