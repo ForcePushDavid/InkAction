@@ -13,9 +13,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
@@ -106,7 +111,7 @@ fun TodoCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(if (todo.completed) BgSurface.copy(alpha = 0.3f) else BgSurface)
-            .androidx.compose.foundation.clickable { onToggle() }
+            .clickable { onToggle() }
             .padding(vertical = 12.dp, horizontal = 16.dp),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -117,7 +122,7 @@ fun TodoCard(
                 .padding(top = 2.dp)
                 .size(20.dp)
                 .clip(androidx.compose.foundation.shape.CircleShape)
-                .androidx.compose.foundation.border(
+                .border(
                     width = 2.dp, 
                     color = if (todo.completed) TextMuted else priorityColor, 
                     shape = androidx.compose.foundation.shape.CircleShape
@@ -127,7 +132,7 @@ fun TodoCard(
         ) {
             if (todo.completed) {
                 Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.Check,
+                    imageVector = Icons.Default.Check,
                     contentDescription = null,
                     tint = BgSurface,
                     modifier = Modifier.size(14.dp)
@@ -148,7 +153,7 @@ fun TodoCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.CalendarMonth,
+                        imageVector = Icons.Default.CalendarMonth,
                         contentDescription = null,
                         tint = AccentRed,
                         modifier = Modifier.size(12.dp)

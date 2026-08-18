@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.width
 import com.inkaction.app.ai.EventDto
 import com.inkaction.app.ui.theme.AccentBlue
 import com.inkaction.app.ui.theme.AccentCyan
