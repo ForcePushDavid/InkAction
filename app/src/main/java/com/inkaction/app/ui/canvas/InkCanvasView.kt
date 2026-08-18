@@ -55,12 +55,9 @@ class InkCanvasView @JvmOverloads constructor(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val toolType = event.getToolType(0)
         
-        // Palm Rejection: If an active S-Pen is being used, ignore accidental touches
-        if (toolType == MotionEvent.TOOL_TYPE_FINGER && hasActiveStylus) {
+        // Strict Palm Rejection: ONLY allow S-Pen (Stylus/Eraser). Ignore all fingers/palms.
+        if (toolType != MotionEvent.TOOL_TYPE_STYLUS && toolType != MotionEvent.TOOL_TYPE_ERASER) {
             return false
-        }
-        if (toolType == MotionEvent.TOOL_TYPE_STYLUS || toolType == MotionEvent.TOOL_TYPE_ERASER) {
-            hasActiveStylus = true
         }
 
         val x = event.x
