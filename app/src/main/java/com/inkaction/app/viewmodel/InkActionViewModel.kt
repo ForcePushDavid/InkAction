@@ -201,14 +201,16 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                         )
                     }
                     if (res.todos.isNotEmpty()) {
+                        val baseTimestamp = System.currentTimeMillis()
                         storageManager.saveTodos(
-                            res.todos.map {
+                            res.todos.mapIndexed { idx, it ->
                                 SavedTodo(
-                                    id = it.id,
+                                    id = if (it.id.isNotBlank() && it.id.startsWith("todo-")) "${it.id}_${baseTimestamp}_$idx" else java.util.UUID.randomUUID().toString(),
                                     text = it.text,
                                     priority = it.priority,
                                     dueDate = it.dueDate,
-                                    isCompleted = it.completed
+                                    isCompleted = it.completed,
+                                    timestamp = baseTimestamp + idx
                                 )
                             }
                         )

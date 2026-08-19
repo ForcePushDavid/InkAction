@@ -69,8 +69,20 @@ class NoteStorageManager(private val context: Context) {
             if (todosFile.exists()) {
                 val json = todosFile.readText()
                 val type = object : TypeToken<List<SavedTodo>>() {}.type
-                val todos: List<SavedTodo>? = gson.fromJson(json, type)
-                if (todos != null) _todosFlow.value = todos
+                val rawTodos: List<SavedTodo>? = gson.fromJson(json, type)
+                if (rawTodos != null) {
+                    val seenIds = mutableSetOf<String>()
+                    val sanitizedTodos = rawTodos.mapIndexed { index, todo ->
+                        val uniqueId = if (todo.id.isBlank() || seenIds.contains(todo.id)) {
+                            "${todo.id.ifBlank { "todo" }}_${System.currentTimeMillis()}_$index"
+                        } else {
+                            todo.id
+                        }
+                        seenIds.add(uniqueId)
+                        todo.copy(id = uniqueId)
+                    }
+                    _todosFlow.value = sanitizedTodos
+                }
             }
             if (foldersFile.exists()) {
                 val json = foldersFile.readText()

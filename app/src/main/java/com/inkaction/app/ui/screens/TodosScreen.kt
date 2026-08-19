@@ -95,7 +95,7 @@ fun TodosScreen(
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
             }
-            items(activeTodos, key = { it.id }) { todo ->
+            items(activeTodos, key = { it.id.ifBlank { "${it.timestamp}_${it.text.hashCode()}" } }) { todo ->
                 TodoCard(
                     todo = todo, 
                     onToggle = { onToggleTodo(todo.id, todo.isCompleted) },
@@ -115,7 +115,7 @@ fun TodosScreen(
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
             }
-            items(completedTodos, key = { it.id }) { todo ->
+            items(completedTodos, key = { "${it.id}_completed" }) { todo ->
                 TodoCard(
                     todo = todo, 
                     onToggle = { onToggleTodo(todo.id, todo.isCompleted) },
