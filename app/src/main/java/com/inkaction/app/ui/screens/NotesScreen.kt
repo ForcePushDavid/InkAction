@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -558,7 +559,10 @@ fun SavedNoteCard(
                         border = androidx.compose.foundation.BorderStroke(1.dp, AccentPurple),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentPurple)
                     ) {
-                        Text("\u2728 AI Enhance", fontSize = 13.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = AccentPurple)
+                            Text("AI Enhance", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        }
                     }
                 }
             }
@@ -575,7 +579,10 @@ fun SavedNoteCard(
                     .padding(12.dp)
             ) {
                 Column {
-                    Text("\u2728 AI Insight", color = AccentPurple, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = AccentPurple)
+                        Text("AI Insight", color = AccentPurple, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = savedNote.aiEnhancement,

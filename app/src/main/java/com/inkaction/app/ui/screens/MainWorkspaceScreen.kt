@@ -183,7 +183,12 @@ fun MainWorkspaceScreen(
                             .background(AccentBlue),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = "🖋️", fontSize = 16.sp)
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = androidx.compose.ui.graphics.Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                     Text(
                         text = "InkAction",
