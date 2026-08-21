@@ -54,4 +54,31 @@ object CalendarSyncUtil {
         }
         return cal.timeInMillis
     }
+
+    /**
+     * Directly inserts an event to the Google Calendar (requires WRITE_CALENDAR permission).
+     */
+    fun addEventToCalendar(context: Context, event: EventDto): Boolean {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.WRITE_CALENDAR) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            return false
+        }
+
+        try {
+            val startTimeMillis = parseDateTime(event.date, event.time)
+            val values = android.content.ContentValues().apply {
+                put(CalendarContract.Events.DTSTART, startTimeMillis)
+                put(CalendarContract.Events.DTEND, startTimeMillis + (60 * 60 * 1000))
+                put(CalendarContract.Events.TITLE, event.title)
+                put(CalendarContract.Events.DESCRIPTION, event.description)
+                put(CalendarContract.Events.EVENT_LOCATION, event.location)
+                put(CalendarContract.Events.CALENDAR_ID, 1) // Default primary calendar
+                put(CalendarContract.Events.EVENT_TIMEZONE, java.util.TimeZone.getDefault().id)
+            }
+            val uri = context.contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
+            return uri != null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        }
+    }
 }

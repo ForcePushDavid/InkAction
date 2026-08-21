@@ -29,7 +29,7 @@ class GeminiAgentEngine(
     /**
      * Executes multi-agent multimodal processing on handwritten bitmap
      */
-    fun processInkBitmap(bitmap: Bitmap, language: String): Flow<AgentPipelineStatus> = flow {
+    fun processInkBitmap(bitmap: Bitmap, language: String, existingTodos: String = "", existingEvents: String = ""): Flow<AgentPipelineStatus> = flow {
         if (apiKey.isBlank()) {
             emit(AgentPipelineStatus.Processing("demo", "No API key configured - running Smart Demo..."))
             emit(runMockPipeline())
@@ -52,7 +52,13 @@ class GeminiAgentEngine(
 
             val currentDateTime = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
             val languageInstruction = if (language != "Auto-detect") "Output language strictly MUST BE: $language" else "Auto-detect the language from the handwriting."
-            val fullPrompt = "${AgentPrompts.MULTI_AGENT_SYSTEM_PROMPT}\n\nCurrent Date and Time: $currentDateTime\nUse this current date and time for interpreting relative dates like 'tomorrow' or 'next friday', and include it in the synthesized note summary or title if appropriate.\n\nLanguage Directive: $languageInstruction"
+            
+            var deduplicationPrompt = ""
+            if (existingTodos.isNotBlank() || existingEvents.isNotBlank()) {
+                deduplicationPrompt = "\n\nDEDUPLICATION DIRECTIVE: The user already has the following items extracted from previous sessions. DO NOT output these again. Only output NEW events and NEW todos.\nExisting Todos: $existingTodos\nExisting Events: $existingEvents"
+            }
+            
+            val fullPrompt = "${AgentPrompts.MULTI_AGENT_SYSTEM_PROMPT}\n\nCurrent Date and Time: $currentDateTime\nUse this current date and time for interpreting relative dates like 'tomorrow' or 'next friday', and include it in the synthesized note summary or title if appropriate.\nAlso, ANY mention of a date, deadline, meeting, or time MUST be added to the 'events' array so the user can be suggested to add it to their calendar.\n\nLanguage Directive: $languageInstruction$deduplicationPrompt"
 
             val inputContent = content {
                 text(fullPrompt)

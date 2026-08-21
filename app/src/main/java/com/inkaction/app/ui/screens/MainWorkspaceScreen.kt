@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Redo
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material.icons.filled.GridOn
@@ -199,6 +200,19 @@ fun MainWorkspaceScreen(
                 }
 
                 Row {
+                    IconButton(
+                        onClick = { 
+                            viewModel.saveCurrentNoteManually() 
+                            android.widget.Toast.makeText(context, "Uloženo", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Save,
+                            contentDescription = "Save",
+                            tint = AccentCyan
+                        )
+                    }
+                    
                     IconButton(
                         onClick = {
                             viewModel.createNewNote()

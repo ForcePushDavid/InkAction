@@ -51,6 +51,9 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     // Persist canvas strokes in ViewModel so they survive tab switches
     val currentStrokes = mutableListOf<com.inkaction.app.ui.canvas.InkStroke>()
 
+    var currentNoteId: Long? = null
+        private set
+
     private val _pipelineStatus = MutableStateFlow<AgentPipelineStatus>(AgentPipelineStatus.Idle)
     val pipelineStatus: StateFlow<AgentPipelineStatus> = _pipelineStatus.asStateFlow()
 
@@ -180,8 +183,11 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
 
         _autoPushState.value = AutoPushUiState(isProcessing = true)
 
+        val existingTodosStr = allTodos.value.filter { !it.isCompleted }.joinToString(", ") { it.text }
+        val existingEventsStr = events.value.joinToString(", ") { "${it.title} on ${it.date}" }
+
         viewModelScope.launch {
-            geminiEngine.processInkBitmap(bitmap, noteLanguage).collect { status ->
+            geminiEngine.processInkBitmap(bitmap, noteLanguage, existingTodosStr, existingEventsStr).collect { status ->
                 _pipelineStatus.value = status
 
                 if (status is AgentPipelineStatus.Success) {
@@ -190,15 +196,32 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                     _events.value = res.events
                     _autoPushState.value = AutoPushUiState(isProcessing = false)
 
+                    if (res.events.isNotEmpty()) {
+                        res.events.forEach { event ->
+                            com.inkaction.app.util.CalendarSyncUtil.addEventToCalendar(getApplication(), event)
+                        }
+                    }
+                    
                     // Persist to local storage
                     res.note?.let { note ->
-                        storageManager.saveNote(
-                            title = note.title,
-                            summary = note.summary,
-                            markdown = note.markdown,
-                            tags = note.tags,
-                            strokes = strokes
-                        )
+                        if (currentNoteId != null) {
+                            storageManager.updateNote(
+                                noteId = currentNoteId!!,
+                                title = note.title,
+                                summary = note.summary,
+                                markdown = note.markdown,
+                                tags = note.tags,
+                                strokes = strokes
+                            )
+                        } else {
+                            currentNoteId = storageManager.saveNote(
+                                title = note.title,
+                                summary = note.summary,
+                                markdown = note.markdown,
+                                tags = note.tags,
+                                strokes = strokes
+                            )
+                        }
                     }
                     if (res.todos.isNotEmpty()) {
                         val baseTimestamp = System.currentTimeMillis()
@@ -278,6 +301,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     fun loadNoteToCanvas(note: SavedNote) {
         currentStrokes.clear()
         currentStrokes.addAll(note.strokes)
+        currentNoteId = note.id
         _currentNote.value = NoteDto(
             title = note.title,
             summary = note.summary,
@@ -289,7 +313,31 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun createNewNote() {
         currentStrokes.clear()
+        currentNoteId = null
         _currentNote.value = null
+    }
+
+    fun saveCurrentNoteManually() {
+        viewModelScope.launch {
+            if (currentNoteId != null) {
+                storageManager.updateNote(
+                    noteId = currentNoteId!!,
+                    title = _currentNote.value?.title ?: "Draft",
+                    summary = _currentNote.value?.summary ?: "",
+                    markdown = _currentNote.value?.markdown ?: "",
+                    tags = _currentNote.value?.tags ?: emptyList(),
+                    strokes = currentStrokes.toList()
+                )
+            } else {
+                currentNoteId = storageManager.saveNote(
+                    title = "Draft Note",
+                    summary = "Manually saved without AI.",
+                    markdown = "",
+                    tags = emptyList(),
+                    strokes = currentStrokes.toList()
+                )
+            }
+        }
     }
 
     fun cancelCountdown() {

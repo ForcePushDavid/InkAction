@@ -115,6 +115,29 @@ class NoteStorageManager(private val context: Context) {
         note.id
     }
 
+    suspend fun updateNote(noteId: Long, title: String, summary: String, markdown: String, tags: List<String>, strokes: List<com.inkaction.app.ui.canvas.InkStroke>) = withContext(Dispatchers.IO) {
+        val currentList = _notesFlow.value.toMutableList()
+        val index = currentList.indexOfFirst { it.id == noteId }
+        if (index != -1) {
+            val oldNote = currentList[index]
+            val updated = oldNote.copy(
+                title = title,
+                summary = summary,
+                markdown = markdown,
+                tags = tags,
+                strokes = strokes,
+                timestamp = System.currentTimeMillis()
+            )
+            currentList[index] = updated
+            _notesFlow.value = currentList
+            try {
+                notesFile.writeText(gson.toJson(currentList))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     suspend fun saveTodos(newTodos: List<SavedTodo>) = withContext(Dispatchers.IO) {
         val currentList = _todosFlow.value.toMutableList()
         // Prepend new todos

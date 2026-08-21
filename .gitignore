@@ -10,3 +10,7 @@
 .cxx
 *.apk
 *.aab
+java_pid*.hprof
+amazon-corretto-17.jdk/
+gradle-8.7-bin.zip
+gradle-8.7/
