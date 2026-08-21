@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -159,7 +160,7 @@ fun MainWorkspaceScreen(
         )
     }
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize().background(BgDark)) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize().background(BgDark).systemBarsPadding()) {
         val isTabletLayout = maxWidth >= 700.dp // Galaxy Tab S9 vs Galaxy S26 Ultra
 
         Column(modifier = Modifier.fillMaxSize()) {
