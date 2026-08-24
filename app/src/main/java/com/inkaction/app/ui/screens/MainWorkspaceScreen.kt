@@ -69,15 +69,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.inkaction.app.ui.canvas.InkCanvasView
 import com.inkaction.app.ui.canvas.ToolType
 import com.inkaction.app.ui.components.AutoPushCountdownPill
-import com.inkaction.app.ui.theme.AccentBlue
-import com.inkaction.app.ui.theme.AccentCyan
-import com.inkaction.app.ui.theme.BgDark
-import com.inkaction.app.ui.theme.BgSurface
-import com.inkaction.app.ui.theme.BgTertiary
-import com.inkaction.app.ui.theme.BorderColor
-import com.inkaction.app.ui.theme.TextMuted
-import com.inkaction.app.ui.theme.TextPrimary
-import com.inkaction.app.ui.theme.TextSecondary
+import androidx.compose.material3.MaterialTheme
 import com.inkaction.app.viewmodel.InkActionViewModel
 
 @Composable
@@ -97,6 +89,22 @@ fun MainWorkspaceScreen(
             if (success) {
                 android.widget.Toast.makeText(context, "Záloha obnovena. Restartujte aplikaci.", android.widget.Toast.LENGTH_LONG).show()
             }
+        }
+    }
+
+    val calendarPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            android.widget.Toast.makeText(context, "Přístup ke kalendáři povolen!", android.widget.Toast.LENGTH_SHORT).show()
+        } else {
+            android.widget.Toast.makeText(context, "Bez oprávnění nelze automaticky ukládat do kalendáře.", android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.WRITE_CALENDAR) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            calendarPermissionLauncher.launch(android.Manifest.permission.WRITE_CALENDAR)
         }
     }
 
@@ -160,7 +168,7 @@ fun MainWorkspaceScreen(
         )
     }
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize().background(BgDark).systemBarsPadding()) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).systemBarsPadding()) {
         val isTabletLayout = maxWidth >= 700.dp // Galaxy Tab S9 vs Galaxy S26 Ultra
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -169,7 +177,7 @@ fun MainWorkspaceScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .background(BgSurface)
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -182,7 +190,7 @@ fun MainWorkspaceScreen(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(AccentBlue),
+                            .background(MaterialTheme.colorScheme.primary),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -196,7 +204,7 @@ fun MainWorkspaceScreen(
                         text = "InkAction",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
 
@@ -210,7 +218,7 @@ fun MainWorkspaceScreen(
                         Icon(
                             imageVector = Icons.Default.Save,
                             contentDescription = "Save",
-                            tint = AccentCyan
+                            tint = MaterialTheme.colorScheme.secondary
                         )
                     }
                     
@@ -224,7 +232,7 @@ fun MainWorkspaceScreen(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "New Note",
-                            tint = AccentCyan
+                            tint = MaterialTheme.colorScheme.secondary
                         )
                     }
 
@@ -235,25 +243,25 @@ fun MainWorkspaceScreen(
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
                                 contentDescription = "Menu",
-                                tint = TextSecondary
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
-                            modifier = Modifier.background(BgSurface)
+                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                         ) {
                             DropdownMenuItem(
                                 text = { 
                                     Column {
-                                        Text("Auto-Push Status", fontWeight = FontWeight.Bold, color = TextPrimary)
+                                        Text("Auto-Push Status", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
                                         Text(
                                             text = if (autoPushState.isProcessing) "Zpracovávám AI..." 
                                                    else if (autoPushState.isArmed) "Čekám na pauzu (${autoPushState.remainingSeconds}s)" 
                                                    else "Neaktivní (Piš)",
                                             fontSize = 12.sp,
-                                            color = TextMuted
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 },
@@ -266,7 +274,7 @@ fun MainWorkspaceScreen(
                         Icon(
                             imageVector = Icons.Default.GridOn,
                             contentDescription = "Toggle Template",
-                            tint = TextSecondary
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -274,7 +282,7 @@ fun MainWorkspaceScreen(
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Settings",
-                            tint = TextSecondary
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -289,7 +297,7 @@ fun MainWorkspaceScreen(
                         modifier = Modifier
                             .weight(1.1f)
                             .fillMaxHeight()
-                            .border(1.dp, BorderColor)
+                            .border(1.dp, MaterialTheme.colorScheme.outline)
                     ) {
                         CanvasPaneContent(
                             viewModel = viewModel,
@@ -305,7 +313,7 @@ fun MainWorkspaceScreen(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .background(BgDark)
+                            .background(MaterialTheme.colorScheme.background)
                     ) {
                         ActionsPaneContent(
                             selectedTab = selectedActionTab,
@@ -370,8 +378,8 @@ fun MainWorkspaceScreen(
 
                 // Bottom Bar for S26 Ultra
                 NavigationBar(
-                    containerColor = BgSurface,
-                    contentColor = TextPrimary
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onBackground
                 ) {
                     NavigationBarItem(
                         selected = phoneNavTab == 0,
@@ -379,10 +387,10 @@ fun MainWorkspaceScreen(
                         icon = { Icon(Icons.Default.Brush, contentDescription = "Canvas") },
                         label = { Text("S-Pen") },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = AccentCyan,
-                            selectedTextColor = AccentCyan,
-                            unselectedIconColor = TextMuted,
-                            unselectedTextColor = TextMuted
+                            selectedIconColor = MaterialTheme.colorScheme.secondary,
+                            selectedTextColor = MaterialTheme.colorScheme.secondary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
                     NavigationBarItem(
@@ -391,10 +399,10 @@ fun MainWorkspaceScreen(
                         icon = { Icon(Icons.Default.AutoAwesome, contentDescription = "Actions") },
                         label = { Text("Actions") },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = AccentCyan,
-                            selectedTextColor = AccentCyan,
-                            unselectedIconColor = TextMuted,
-                            unselectedTextColor = TextMuted
+                            selectedIconColor = MaterialTheme.colorScheme.secondary,
+                            selectedTextColor = MaterialTheme.colorScheme.secondary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
                 }
@@ -429,7 +437,7 @@ fun CanvasPaneContent(
                         this.onStrokeFinished = { count ->
                             viewModel.currentStrokes.clear()
                             viewModel.currentStrokes.addAll(this.strokes)
-                            viewModel.onStrokeFinished(count) { createOcrBitmap() }
+                            viewModel.onStrokeFinished(count) { createOcrBitmaps() }
                         }
                         canvasViewRef = this
                         onCanvasCreated(this)
@@ -437,7 +445,7 @@ fun CanvasPaneContent(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(3000.dp),
+                    .height(10000.dp),
                 update = { view ->
                     view.currentTool = currentTool
                     view.currentColor = currentColor
@@ -471,13 +479,13 @@ fun CanvasPaneContent(
                 onClick = { 
                     if (!autoPushState.isProcessing) {
                         viewModel.triggerActionize(
-                            bitmap = canvasViewRef?.createOcrBitmap(),
+                            bitmaps = canvasViewRef?.createOcrBitmaps() ?: emptyList(),
                             strokes = canvasViewRef?.strokes?.toList() ?: emptyList()
                         ) 
                     }
                 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (autoPushState.isProcessing) AccentBlue.copy(alpha = 0.5f) else AccentBlue
+                    containerColor = if (autoPushState.isProcessing) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary
                 ),
                 shape = CircleShape
             ) {
@@ -526,8 +534,8 @@ fun FloatingToolbar(
     Row(
         modifier = modifier
             .clip(CircleShape)
-            .background(BgSurface.copy(alpha = 0.95f))
-            .border(1.dp, BorderColor, CircleShape)
+            .background(androidx.compose.material3.MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+            .border(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outline, CircleShape)
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -540,7 +548,7 @@ fun FloatingToolbar(
             Icon(
                 imageVector = Icons.Default.Edit,
                 contentDescription = "Pen",
-                tint = if (currentTool == ToolType.PEN) AccentCyan else TextMuted
+                tint = if (currentTool == ToolType.PEN) androidx.compose.material3.MaterialTheme.colorScheme.secondary else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -551,7 +559,7 @@ fun FloatingToolbar(
             Icon(
                 imageVector = Icons.Default.Brush,
                 contentDescription = "Highlighter",
-                tint = if (currentTool == ToolType.HIGHLIGHTER) AccentCyan else TextMuted
+                tint = if (currentTool == ToolType.HIGHLIGHTER) androidx.compose.material3.MaterialTheme.colorScheme.secondary else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -562,7 +570,7 @@ fun FloatingToolbar(
             Icon(
                 imageVector = Icons.Default.Clear,
                 contentDescription = "Eraser",
-                tint = if (currentTool == ToolType.ERASER) AccentCyan else TextMuted
+                tint = if (currentTool == ToolType.ERASER) androidx.compose.material3.MaterialTheme.colorScheme.secondary else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -587,10 +595,10 @@ fun FloatingToolbar(
         Spacer(modifier = Modifier.width(4.dp))
 
         IconButton(onClick = onUndo, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Default.Undo, contentDescription = "Undo", tint = TextMuted)
+            Icon(Icons.Default.Undo, contentDescription = "Undo", tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         }
         IconButton(onClick = onRedo, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Default.Redo, contentDescription = "Redo", tint = TextMuted)
+            Icon(Icons.Default.Redo, contentDescription = "Redo", tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -619,12 +627,12 @@ fun ActionsPaneContent(
     Column(modifier = Modifier.fillMaxSize()) {
         TabRow(
             selectedTabIndex = selectedTab,
-            containerColor = BgDark,
-            contentColor = TextPrimary,
+            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background,
+            contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
             indicator = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
                     Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    color = AccentBlue
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.primary
                 )
             }
         ) {

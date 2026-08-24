@@ -29,7 +29,7 @@ class GeminiAgentEngine(
     /**
      * Executes multi-agent multimodal processing on handwritten bitmap
      */
-    fun processInkBitmap(bitmap: Bitmap, language: String, existingTodos: String = "", existingEvents: String = ""): Flow<AgentPipelineStatus> = flow {
+    fun processInkBitmap(bitmaps: List<Bitmap>, language: String, existingTodos: String = "", existingEvents: String = ""): Flow<AgentPipelineStatus> = flow {
         if (apiKey.isBlank()) {
             emit(AgentPipelineStatus.Processing("demo", "No API key configured - running Smart Demo..."))
             emit(runMockPipeline())
@@ -37,7 +37,7 @@ class GeminiAgentEngine(
         }
 
         try {
-            emit(AgentPipelineStatus.Processing("uploading", "Sending ink bitmap to Google Gemini..."))
+            emit(AgentPipelineStatus.Processing("uploading", "Sending ink pages to Google Gemini..."))
 
             val generativeModel = GenerativeModel(
                 modelName = modelName,
@@ -62,7 +62,7 @@ class GeminiAgentEngine(
 
             val inputContent = content {
                 text(fullPrompt)
-                image(bitmap)
+                bitmaps.forEach { image(it) }
             }
 
             val response = generativeModel.generateContent(inputContent)

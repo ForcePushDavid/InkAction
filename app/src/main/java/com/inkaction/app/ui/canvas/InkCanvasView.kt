@@ -271,50 +271,110 @@ class InkCanvasView @JvmOverloads constructor(
     fun isEmpty(): Boolean = strokes.isEmpty()
 
     /**
-     * Generates a high-contrast bitmap on a pure white background for Google Gemini Multimodal API.
+     * Generates a list of scaled, high-contrast bitmaps (pages) to prevent OutOfMemory and allow infinite canvas.
      */
-    fun createOcrBitmap(): Bitmap? {
-        if (width <= 0 || height <= 0 || isEmpty()) return null
+    fun createOcrBitmaps(): List<Bitmap> {
+        if (width <= 0 || height <= 0 || isEmpty()) return emptyList()
 
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val ocrCanvas = Canvas(bitmap)
-
-        // Pure white background for maximum Gemini OCR & Vision clarity
-        ocrCanvas.drawColor(Color.WHITE)
-
-        val ocrPaint = Paint().apply {
-            isAntiAlias = true
-            style = Paint.Style.STROKE
-            strokeJoin = Paint.Join.ROUND
-            strokeCap = Paint.Cap.ROUND
+        val strokeBounds = strokes.mapNotNull { stroke ->
+            if (stroke.points.isEmpty()) return@mapNotNull null
+            val minY = stroke.points.minOf { it.y }
+            val maxY = stroke.points.maxOf { it.y }
+            stroke to Pair(minY, maxY)
         }
 
-        for (stroke in strokes) {
-            when (stroke.tool) {
-                ToolType.PEN -> {
-                    // Convert light strokes to dark ink for Gemini OCR
-                    val darkInk = if (stroke.color == Color.WHITE || stroke.color == Color.parseColor("#F0F6FC")) {
-                        Color.parseColor("#111827")
-                    } else {
-                        stroke.color
+        if (strokeBounds.isEmpty()) return emptyList()
+
+        val globalMinY = strokeBounds.minOf { it.second.first }
+        val globalMaxY = strokeBounds.maxOf { it.second.second }
+
+        val pageHeight = 2000f
+        val bitmaps = mutableListOf<Bitmap>()
+
+        var currentY = globalMinY - 20f // small padding top
+        if (currentY < 0f) currentY = 0f
+
+        while (currentY < globalMaxY) {
+            var cutY = currentY + pageHeight
+            
+            if (cutY < globalMaxY) {
+                var foundCut = false
+                for (testY in cutY.toInt().. (cutY + 600).toInt() step 20) {
+                    val isClean = strokeBounds.none { (_, bounds) ->
+                        bounds.first < testY && bounds.second > testY
                     }
-                    ocrPaint.color = darkInk
-                    ocrPaint.alpha = 255
-                    ocrPaint.strokeWidth = stroke.baseWidth.coerceAtLeast(3f)
-                    ocrCanvas.drawPath(stroke.path, ocrPaint)
+                    if (isClean) {
+                        cutY = testY.toFloat()
+                        foundCut = true
+                        break
+                    }
                 }
-                ToolType.HIGHLIGHTER -> {
-                    ocrPaint.color = Color.parseColor("#FFE500")
-                    ocrPaint.alpha = 100
-                    ocrPaint.strokeWidth = stroke.baseWidth * 3f
-                    ocrCanvas.drawPath(stroke.path, ocrPaint)
+                
+                if (!foundCut) {
+                    for (testY in cutY.toInt() downTo (cutY - 600).toInt() step 20) {
+                        val isClean = strokeBounds.none { (_, bounds) ->
+                            bounds.first < testY && bounds.second > testY
+                        }
+                        if (isClean) {
+                            cutY = testY.toFloat()
+                            foundCut = true
+                            break
+                        }
+                    }
                 }
-                ToolType.ERASER -> {
-                    // Skip or erase on OCR
+            } else {
+                cutY = globalMaxY + 20f // small padding bottom
+            }
+            
+            val chunkHeight = (cutY - currentY).toInt().coerceAtLeast(100)
+            val scale = 0.5f
+            val scaledWidth = (width * scale).toInt()
+            val scaledHeight = (chunkHeight * scale).toInt()
+            
+            val bitmap = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
+            val ocrCanvas = Canvas(bitmap)
+            ocrCanvas.drawColor(Color.WHITE)
+            
+            ocrCanvas.scale(scale, scale)
+            ocrCanvas.translate(0f, -currentY)
+            
+            val ocrPaint = Paint().apply {
+                isAntiAlias = true
+                style = Paint.Style.STROKE
+                strokeJoin = Paint.Join.ROUND
+                strokeCap = Paint.Cap.ROUND
+            }
+
+            for (stroke in strokes) {
+                val bounds = strokeBounds.find { it.first == stroke }?.second
+                if (bounds != null && (bounds.second < currentY || bounds.first > cutY)) continue
+                
+                when (stroke.tool) {
+                    ToolType.PEN -> {
+                        val darkInk = if (stroke.color == Color.WHITE || stroke.color == Color.parseColor("#F0F6FC")) {
+                            Color.parseColor("#111827")
+                        } else {
+                            stroke.color
+                        }
+                        ocrPaint.color = darkInk
+                        ocrPaint.alpha = 255
+                        ocrPaint.strokeWidth = stroke.baseWidth.coerceAtLeast(3f)
+                        ocrCanvas.drawPath(stroke.path, ocrPaint)
+                    }
+                    ToolType.HIGHLIGHTER -> {
+                        ocrPaint.color = Color.parseColor("#FFE500")
+                        ocrPaint.alpha = 100
+                        ocrPaint.strokeWidth = stroke.baseWidth * 3f
+                        ocrCanvas.drawPath(stroke.path, ocrPaint)
+                    }
+                    ToolType.ERASER -> { }
                 }
             }
+            
+            bitmaps.add(bitmap)
+            currentY = cutY
         }
-
-        return bitmap
+        
+        return bitmaps
     }
 }

@@ -139,16 +139,16 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         cancelCountdown()
     }
 
-    fun onStrokeFinished(strokeCount: Int, getOcrBitmap: () -> Bitmap?) {
+    fun onStrokeFinished(strokeCount: Int, getOcrBitmaps: () -> List<Bitmap>) {
         if (strokeCount <= 0 || debounceDurationMs <= 0 || _autoPushState.value.isProcessing) {
             cancelCountdown()
             return
         }
 
-        startCountdown(getOcrBitmap)
+        startCountdown(getOcrBitmaps)
     }
 
-    private fun startCountdown(getOcrBitmap: () -> Bitmap?) {
+    private fun startCountdown(getOcrBitmaps: () -> List<Bitmap>) {
         cancelCountdown()
         countdownJob = viewModelScope.launch {
             val totalSteps = 60
@@ -173,13 +173,13 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
             }
 
             // Trigger AI Pipeline
-            triggerActionize(getOcrBitmap())
+            triggerActionize(getOcrBitmaps())
         }
     }
 
-    fun triggerActionize(bitmap: Bitmap?, strokes: List<com.inkaction.app.ui.canvas.InkStroke> = emptyList()) {
+    fun triggerActionize(bitmaps: List<Bitmap>, strokes: List<com.inkaction.app.ui.canvas.InkStroke> = emptyList()) {
         cancelCountdown()
-        if (bitmap == null) return
+        if (bitmaps.isEmpty()) return
 
         _autoPushState.value = AutoPushUiState(isProcessing = true)
 
@@ -187,7 +187,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         val existingEventsStr = events.value.joinToString(", ") { "${it.title} on ${it.date}" }
 
         viewModelScope.launch {
-            geminiEngine.processInkBitmap(bitmap, noteLanguage, existingTodosStr, existingEventsStr).collect { status ->
+            geminiEngine.processInkBitmap(bitmaps, noteLanguage, existingTodosStr, existingEventsStr).collect { status ->
                 _pipelineStatus.value = status
 
                 if (status is AgentPipelineStatus.Success) {
