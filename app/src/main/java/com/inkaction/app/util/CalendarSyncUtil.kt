@@ -25,8 +25,10 @@ object CalendarSyncUtil {
             putExtra(CalendarContract.EXTRA_EVENT_END_TIME, startTimeMillis + (60 * 60 * 1000))
         }
 
-        if (intent.resolveActivity(context.packageManager) != null) {
+        try {
             context.startActivity(intent)
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(context, "Google Calendar app is not installed or accessible.", android.widget.Toast.LENGTH_LONG).show()
         }
     }
 
