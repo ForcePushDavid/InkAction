@@ -32,13 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.width
 import com.inkaction.app.ai.EventDto
-import com.inkaction.app.ui.theme.AccentBlue
-import com.inkaction.app.ui.theme.AccentCyan
-import com.inkaction.app.ui.theme.BgSurface
-import com.inkaction.app.ui.theme.BgTertiary
-import com.inkaction.app.ui.theme.TextMuted
-import com.inkaction.app.ui.theme.TextPrimary
-import com.inkaction.app.ui.theme.TextSecondary
+
 import com.inkaction.app.util.CalendarSyncUtil
 
 @Composable
@@ -61,18 +55,18 @@ fun CalendarScreen(
                 Icon(
                     imageVector = Icons.Default.CalendarMonth,
                     contentDescription = null,
-                    tint = TextMuted,
+                    tint = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.size(48.dp)
                 )
                 Text(
                     text = "No scheduled appointments",
                     style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = "Meetings, dates, and reminders mentioned in your S-Pen handwriting are scheduled automatically.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextMuted,
+                    color = MaterialTheme.colorScheme.outline,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             }
@@ -106,7 +100,7 @@ fun EventCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(BgSurface),
+            .background(MaterialTheme.colorScheme.surface),
         verticalAlignment = Alignment.Top
     ) {
         // Vertical color stripe (Google Calendar style)
@@ -114,7 +108,7 @@ fun EventCard(
             modifier = Modifier
                 .width(4.dp)
                 .height(80.dp)
-                .background(AccentBlue)
+                .background(MaterialTheme.colorScheme.primary)
         )
 
         Row(
@@ -131,13 +125,13 @@ fun EventCard(
                     text = event.time.ifBlank { "All-day" },
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 if (event.duration.isNotBlank()) {
                     Text(
                         text = event.duration,
                         fontSize = 11.sp,
-                        color = TextMuted
+                        color = MaterialTheme.colorScheme.outline
                     )
                 }
             }
@@ -148,7 +142,7 @@ fun EventCard(
                     .padding(top = 6.dp)
                     .size(8.dp)
                     .clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(AccentBlue)
+                    .background(MaterialTheme.colorScheme.primary)
             )
 
             // Details
@@ -157,14 +151,14 @@ fun EventCard(
                     text = event.title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 
                 if (event.date.isNotBlank()) {
                     Text(
                         text = event.date,
                         fontSize = 12.sp,
-                        color = AccentCyan
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 }
 
@@ -173,7 +167,7 @@ fun EventCard(
                     Text(
                         text = event.description,
                         fontSize = 13.sp,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 16.sp
                     )
                 }
@@ -188,10 +182,10 @@ fun EventCard(
                         imageVector = Icons.Default.Event,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = AccentBlue
+                        tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.size(6.dp))
-                    Text(text = "Add to Google Calendar", fontSize = 12.sp, color = AccentBlue)
+                    Text(text = "Add to Google Calendar", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }

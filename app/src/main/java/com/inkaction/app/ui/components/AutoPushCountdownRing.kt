@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,10 +20,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.inkaction.app.ui.theme.AccentCyan
-import com.inkaction.app.ui.theme.BgSurface
-import com.inkaction.app.ui.theme.BorderColor
-import com.inkaction.app.ui.theme.TextSecondary
+
 import com.inkaction.app.viewmodel.AutoPushUiState
 
 @Composable
@@ -35,9 +33,12 @@ fun AutoPushCountdownPill(
         label = "autoPushProgress"
     )
 
+    val outlineVariantColor = MaterialTheme.colorScheme.outlineVariant
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+
     Row(
         modifier = modifier
-            .background(BgSurface.copy(alpha = 0.9f), CircleShape)
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), CircleShape)
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -49,13 +50,13 @@ fun AutoPushCountdownPill(
             Canvas(modifier = Modifier.size(18.dp)) {
                 // Background circle
                 drawCircle(
-                    color = BorderColor,
+                    color = outlineVariantColor,
                     style = Stroke(width = 2.5.dp.toPx())
                 )
                 // Progress arc
                 if (state.isArmed) {
                     drawArc(
-                        color = AccentCyan,
+                        color = secondaryColor,
                         startAngle = -90f,
                         sweepAngle = animatedProgress * 360f,
                         useCenter = false,
@@ -74,7 +75,7 @@ fun AutoPushCountdownPill(
         Text(
             text = labelText,
             fontSize = 12.sp,
-            color = if (state.isArmed) AccentCyan else TextSecondary
+            color = if (state.isArmed) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

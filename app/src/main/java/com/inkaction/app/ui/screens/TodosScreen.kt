@@ -36,12 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inkaction.app.data.SavedTodo
 import com.inkaction.app.ui.theme.AccentAmber
-import com.inkaction.app.ui.theme.AccentBlue
 import com.inkaction.app.ui.theme.AccentRed
-import com.inkaction.app.ui.theme.BgSurface
-import com.inkaction.app.ui.theme.TextMuted
-import com.inkaction.app.ui.theme.TextPrimary
-import com.inkaction.app.ui.theme.TextSecondary
 
 @Composable
 fun TodosScreen(
@@ -63,13 +58,13 @@ fun TodosScreen(
                 Icon(
                     imageVector = Icons.Default.Checklist,
                     contentDescription = null,
-                    tint = TextMuted,
+                    tint = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.size(48.dp)
                 )
                 Text(
                     text = "Žádné úkoly",
                     style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
@@ -89,7 +84,7 @@ fun TodosScreen(
             item {
                 Text(
                     text = "Aktivní úkoly",
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -109,7 +104,7 @@ fun TodosScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Historie (Dokončené)",
-                    color = TextMuted,
+                    color = MaterialTheme.colorScheme.outline,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -135,7 +130,7 @@ fun TodoCard(
     val isDone = todo.isCompleted
     val priorityColor = when (todo.priority.lowercase()) {
         "high" -> AccentRed
-        "low" -> AccentBlue
+        "low" -> MaterialTheme.colorScheme.primary
         else -> AccentAmber
     }
 
@@ -143,7 +138,7 @@ fun TodoCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(if (isDone) BgSurface.copy(alpha = 0.3f) else BgSurface)
+            .background(if (isDone) MaterialTheme.colorScheme.surface.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface)
             .clickable { onToggle() }
             .padding(vertical = 12.dp, horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -156,17 +151,17 @@ fun TodoCard(
                 .clip(androidx.compose.foundation.shape.CircleShape)
                 .border(
                     width = 2.dp, 
-                    color = if (isDone) TextMuted else priorityColor, 
+                    color = if (isDone) MaterialTheme.colorScheme.outline else priorityColor, 
                     shape = androidx.compose.foundation.shape.CircleShape
                 )
-                .background(if (isDone) TextMuted else androidx.compose.ui.graphics.Color.Transparent),
+                .background(if (isDone) MaterialTheme.colorScheme.outline else androidx.compose.ui.graphics.Color.Transparent),
             contentAlignment = Alignment.Center
         ) {
             if (isDone) {
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    tint = BgSurface,
+                    tint = MaterialTheme.colorScheme.surface,
                     modifier = Modifier.size(14.dp)
                 )
             }
@@ -177,7 +172,7 @@ fun TodoCard(
                 text = todo.text,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (isDone) TextMuted else TextPrimary,
+                color = if (isDone) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onBackground,
                 textDecoration = if (isDone) TextDecoration.LineThrough else TextDecoration.None
             )
 
@@ -187,14 +182,14 @@ fun TodoCard(
                     Icon(
                         imageVector = Icons.Default.CalendarMonth,
                         contentDescription = null,
-                        tint = if (isDone) TextMuted else AccentRed,
+                        tint = if (isDone) MaterialTheme.colorScheme.outline else AccentRed,
                         modifier = Modifier.size(12.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = todo.dueDate,
                         fontSize = 12.sp,
-                        color = if (isDone) TextMuted else AccentRed,
+                        color = if (isDone) MaterialTheme.colorScheme.outline else AccentRed,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -208,7 +203,7 @@ fun TodoCard(
             Icon(
                 imageVector = Icons.Default.Delete,
                 contentDescription = "Smazat",
-                tint = TextMuted,
+                tint = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.size(20.dp)
             )
         }

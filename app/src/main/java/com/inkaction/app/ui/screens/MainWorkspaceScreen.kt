@@ -423,6 +423,7 @@ fun CanvasPaneContent(
     val scrollState = androidx.compose.foundation.rememberScrollState()
 
     Box(modifier = Modifier.fillMaxSize()) {
+        val systemDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -447,7 +448,7 @@ fun CanvasPaneContent(
                     .fillMaxWidth()
                     .height(10000.dp),
                 update = { view ->
-                    val isDark = viewModel.themeMode == "dark" || (viewModel.themeMode == "system" && androidx.compose.foundation.isSystemInDarkTheme())
+                    val isDark = viewModel.themeMode == "dark" || (viewModel.themeMode == "system" && systemDarkTheme)
                     view.isDarkMode = isDark
                     view.currentTool = currentTool
                     view.currentColor = currentColor

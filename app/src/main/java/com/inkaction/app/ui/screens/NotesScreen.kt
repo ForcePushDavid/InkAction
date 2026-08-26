@@ -54,14 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inkaction.app.ai.NoteDto
 import com.inkaction.app.data.SavedNote
-import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.primary
-import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.secondary
-import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.tertiary
-import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.surface
-import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.surfaceVariant
-import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.outline
-import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.onBackground
-import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.onSurfaceVariant
+
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -264,8 +257,6 @@ fun NotesScreen(
             }
         }
     }
-    }
-    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -389,8 +380,7 @@ fun NoteCard(note: NoteDto, context: Context) {
                 }
             }
         }
-    }
-    }
+        }
     }
 }
 
@@ -601,6 +591,6 @@ fun SavedNoteCard(
                 }
             }
         }
-    }
+        }
     }
 }
