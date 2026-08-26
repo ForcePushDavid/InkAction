@@ -447,6 +447,8 @@ fun CanvasPaneContent(
                     .fillMaxWidth()
                     .height(10000.dp),
                 update = { view ->
+                    val isDark = viewModel.themeMode == "dark" || (viewModel.themeMode == "system" && androidx.compose.foundation.isSystemInDarkTheme())
+                    view.isDarkMode = isDark
                     view.currentTool = currentTool
                     view.currentColor = currentColor
                     view.setTemplate(viewModel.canvasTemplate)

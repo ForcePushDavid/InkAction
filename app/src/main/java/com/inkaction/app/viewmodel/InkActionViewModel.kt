@@ -139,6 +139,8 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         cancelCountdown()
     }
 
+    private var autoSaveJob: Job? = null
+
     fun onStrokeFinished(strokeCount: Int, getOcrBitmaps: () -> List<Bitmap>) {
         if (strokeCount <= 0 || debounceDurationMs <= 0 || _autoPushState.value.isProcessing) {
             cancelCountdown()
@@ -146,6 +148,12 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         startCountdown(getOcrBitmaps)
+        
+        autoSaveJob?.cancel()
+        autoSaveJob = viewModelScope.launch {
+            delay(1500)
+            saveCurrentNoteManually()
+        }
     }
 
     private fun startCountdown(getOcrBitmaps: () -> List<Bitmap>) {

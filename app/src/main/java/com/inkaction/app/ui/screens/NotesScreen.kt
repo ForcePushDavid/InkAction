@@ -54,14 +54,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inkaction.app.ai.NoteDto
 import com.inkaction.app.data.SavedNote
-import com.inkaction.app.ui.theme.AccentBlue
-import com.inkaction.app.ui.theme.AccentCyan
-import com.inkaction.app.ui.theme.AccentPurple
-import com.inkaction.app.ui.theme.BgSurface
-import com.inkaction.app.ui.theme.BgTertiary
-import com.inkaction.app.ui.theme.TextMuted
-import com.inkaction.app.ui.theme.TextPrimary
-import com.inkaction.app.ui.theme.TextSecondary
+import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.primary
+import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.secondary
+import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.tertiary
+import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.surface
+import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.surfaceVariant
+import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.outline
+import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.onBackground
+import com.inkaction.app.ui.theme.MaterialTheme.colorScheme.onSurfaceVariant
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -139,7 +139,7 @@ fun NotesScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (note != null) {
-            Text("Aktivní poznámka", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("Aktivní poznámka", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             NoteCard(note = note, context = context)
         } 
         
@@ -156,19 +156,19 @@ fun NotesScreen(
                         Icon(
                             imageVector = Icons.Default.EditNote,
                             contentDescription = null,
-                            tint = TextMuted,
+                            tint = MaterialTheme.colorScheme.outline,
                             modifier = Modifier.size(48.dp)
                         )
                         Text(
                             text = "Knihovna poznámek je prázdná",
                             style = MaterialTheme.typography.titleMedium,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
             }
         } else {
-            Text("Historie (Knihovna)", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("Historie (Knihovna)", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             
             OutlinedTextField(
                 value = searchQuery,
@@ -192,7 +192,7 @@ fun NotesScreen(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(50))
-                        .background(AccentBlue)
+                        .background(MaterialTheme.colorScheme.primary)
                         .clickable { showCreateFolderDialog = true }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
@@ -204,7 +204,7 @@ fun NotesScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
-                            .background(if (isSelected) AccentCyan else BgTertiary)
+                            .background(if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant)
                             .clickable {
                                 selectedFolderId = if (isSelected) null else folder.id
                             }
@@ -214,7 +214,7 @@ fun NotesScreen(
                             text = folder.name,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (isSelected) BgSurface else TextPrimary
+                            color = if (isSelected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
@@ -232,7 +232,7 @@ fun NotesScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
-                                .background(if (isSelected) AccentPurple else BgTertiary)
+                                .background(if (isSelected) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceVariant)
                                 .clickable { 
                                     if (isSelected) selectedTag = null else selectedTag = tag
                                 }
@@ -242,7 +242,7 @@ fun NotesScreen(
                                 text = "#$tag",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = if (isSelected) BgSurface else AccentPurple
+                                color = if (isSelected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.tertiary
                             )
                         }
                     }
@@ -264,20 +264,23 @@ fun NotesScreen(
             }
         }
     }
+    }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NoteCard(note: NoteDto, context: Context) {
+    var isExpanded by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(BgSurface)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(16.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().clickable { isExpanded = !isExpanded },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
@@ -286,7 +289,7 @@ fun NoteCard(note: NoteDto, context: Context) {
                     text = note.title.ifBlank { "Nová poznámka" },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
                 val sdf = java.text.SimpleDateFormat("dd. MM. yyyy, HH:mm", java.util.Locale.getDefault())
@@ -295,7 +298,7 @@ fun NoteCard(note: NoteDto, context: Context) {
                 Text(
                     text = "Syntetizováno: $dateString",
                     style = MaterialTheme.typography.labelSmall,
-                    color = TextMuted
+                    color = MaterialTheme.colorScheme.outline
                 )
             }
 
@@ -312,7 +315,7 @@ fun NoteCard(note: NoteDto, context: Context) {
                     Icon(
                         imageVector = Icons.Default.Print,
                         contentDescription = "Export to PDF",
-                        tint = TextSecondary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -328,26 +331,27 @@ fun NoteCard(note: NoteDto, context: Context) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
                         contentDescription = "Copy Note",
-                        tint = TextSecondary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
             }
         }
 
+        if (isExpanded) {
         if (note.summary.isNotBlank()) {
             Spacer(modifier = Modifier.height(12.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(AccentCyan.copy(alpha = 0.1f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
                     .padding(12.dp)
             ) {
                 Text(
                     text = note.summary,
                     fontSize = 13.sp,
-                    color = AccentCyan,
+                    color = MaterialTheme.colorScheme.secondary,
                     lineHeight = 18.sp
                 )
             }
@@ -358,7 +362,7 @@ fun NoteCard(note: NoteDto, context: Context) {
         Text(
             text = note.markdown,
             fontSize = 14.sp,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             lineHeight = 22.sp
         )
 
@@ -372,19 +376,21 @@ fun NoteCard(note: NoteDto, context: Context) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
-                            .background(BgTertiary)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = "#$tag",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = AccentPurple
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                     }
                 }
             }
         }
+    }
+    }
     }
 }
 
@@ -401,17 +407,18 @@ fun SavedNoteCard(
     onEnhance: () -> Unit,
     isEnhancing: Boolean
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var folderMenuExpanded by remember { mutableStateOf(false) }
+    var isDetailsExpanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(BgSurface)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(16.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().clickable { isDetailsExpanded = !isDetailsExpanded },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
@@ -421,7 +428,7 @@ fun SavedNoteCard(
                         text = savedNote.title.ifBlank { "Nová poznámka" },
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     
                     if (savedNote.folderId != null) {
@@ -434,7 +441,7 @@ fun SavedNoteCard(
                                     .background(androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(folder.colorHex)))
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
-                                Text(folder.name, fontSize = 10.sp, color = BgSurface, fontWeight = FontWeight.Bold)
+                                Text(folder.name, fontSize = 10.sp, color = MaterialTheme.colorScheme.surface, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -446,27 +453,27 @@ fun SavedNoteCard(
                 Text(
                     text = "Syntetizováno: $dateString",
                     style = MaterialTheme.typography.labelSmall,
-                    color = TextMuted
+                    color = MaterialTheme.colorScheme.outline
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 // Folder Dropdown
                 Box {
-                    IconButton(onClick = { expanded = true }) {
-                        Icon(Icons.Default.EditNote, contentDescription = "Přiřadit do složky", tint = TextMuted)
+                    IconButton(onClick = { folderMenuExpanded = true }) {
+                        Icon(Icons.Default.EditNote, contentDescription = "Přiřadit do složky", tint = MaterialTheme.colorScheme.outline)
                     }
                     androidx.compose.material3.DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                        expanded = folderMenuExpanded,
+                        onDismissRequest = { folderMenuExpanded = false }
                     ) {
                         androidx.compose.material3.DropdownMenuItem(
                             text = { Text("Bez složky") },
-                            onClick = { onMoveNote(null); expanded = false }
+                            onClick = { onMoveNote(null); folderMenuExpanded = false }
                         )
                         folders.forEach { folder ->
                             androidx.compose.material3.DropdownMenuItem(
                                 text = { Text(folder.name) },
-                                onClick = { onMoveNote(folder.id); expanded = false }
+                                onClick = { onMoveNote(folder.id); folderMenuExpanded = false }
                             )
                         }
                     }
@@ -476,34 +483,35 @@ fun SavedNoteCard(
                     Icon(
                         imageVector = if (savedNote.isPinned) Icons.Default.PushPin else Icons.Outlined.PushPin, 
                         contentDescription = if (savedNote.isPinned) "Odepnout" else "Připnout", 
-                        tint = if (savedNote.isPinned) AccentPurple else TextMuted
+                        tint = if (savedNote.isPinned) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outline
                     )
                 }
                 IconButton(onClick = onDeleteNote, modifier = Modifier.size(36.dp)) {
-                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Smazat", tint = TextMuted)
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Smazat", tint = MaterialTheme.colorScheme.outline)
                 }
                 Button(
                     onClick = onResumeDrawing,
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text("Kreslit")
                 }
             }
         }
 
+        if (isDetailsExpanded) {
         if (savedNote.summary.isNotBlank()) {
             Spacer(modifier = Modifier.height(12.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(AccentCyan.copy(alpha = 0.1f))
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
                     .padding(12.dp)
             ) {
                 Text(
                     text = savedNote.summary,
                     fontSize = 13.sp,
-                    color = AccentCyan,
+                    color = MaterialTheme.colorScheme.secondary,
                     lineHeight = 18.sp
                 )
             }
@@ -513,7 +521,7 @@ fun SavedNoteCard(
         Text(
             text = savedNote.markdown,
             fontSize = 14.sp,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             lineHeight = 22.sp
         )
 
@@ -527,14 +535,14 @@ fun SavedNoteCard(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
-                            .background(BgTertiary)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = "#$tag",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = AccentPurple
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                     }
                 }
@@ -550,17 +558,17 @@ fun SavedNoteCard(
             ) {
                 if (isEnhancing) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(18.dp), color = AccentPurple, strokeWidth = 2.dp)
-                        Text("Analyzuji...", color = AccentPurple, fontSize = 12.sp)
+                        androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.tertiary, strokeWidth = 2.dp)
+                        Text("Analyzuji...", color = MaterialTheme.colorScheme.tertiary, fontSize = 12.sp)
                     }
                 } else {
                     androidx.compose.material3.OutlinedButton(
                         onClick = onEnhance,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, AccentPurple),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentPurple)
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.tertiary)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = AccentPurple)
+                            Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.tertiary)
                             Text("AI Enhance", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                         }
                     }
@@ -574,24 +582,25 @@ fun SavedNoteCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(AccentPurple.copy(alpha = 0.1f))
-                    .border(1.dp, AccentPurple, RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f))
+                    .border(1.dp, MaterialTheme.colorScheme.tertiary, RoundedCornerShape(8.dp))
                     .padding(12.dp)
             ) {
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = AccentPurple)
-                        Text("AI Insight", color = AccentPurple, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.tertiary)
+                        Text("AI Insight", color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = savedNote.aiEnhancement,
                         fontSize = 13.sp,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         lineHeight = 18.sp
                     )
                 }
             }
         }
+    }
     }
 }

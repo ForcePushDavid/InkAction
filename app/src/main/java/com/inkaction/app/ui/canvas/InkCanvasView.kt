@@ -40,6 +40,14 @@ class InkCanvasView @JvmOverloads constructor(
         invalidate()
     }
 
+    var isDarkMode: Boolean = true
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
     var onStrokeStarted: (() -> Unit)? = null
     var onStrokeFinished: ((Int) -> Unit)? = null
 
@@ -184,6 +192,8 @@ class InkCanvasView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
+        templatePaint.color = if (isDarkMode) Color.parseColor("#30363D") else Color.parseColor("#D0D7DE")
+
         if (templateType > 0) {
             when (templateType) {
                 1 -> { // Dots
@@ -224,14 +234,25 @@ class InkCanvasView @JvmOverloads constructor(
     private fun drawStroke(canvas: Canvas, stroke: InkStroke) {
         val paint = if (stroke.tool == ToolType.ERASER) eraserPaint else strokePaint
 
+        var drawColor = stroke.color
+        if (!isDarkMode) {
+            if (stroke.color == Color.WHITE || stroke.color == Color.parseColor("#F0F6FC")) {
+                drawColor = Color.parseColor("#1F2328") // Dark text for light mode
+            }
+        } else {
+            if (stroke.color == Color.BLACK || stroke.color == Color.parseColor("#1F2328")) {
+                drawColor = Color.parseColor("#F0F6FC") // Light text for dark mode
+            }
+        }
+
         when (stroke.tool) {
             ToolType.PEN -> {
-                paint.color = stroke.color
+                paint.color = drawColor
                 paint.alpha = 255
                 paint.strokeWidth = stroke.baseWidth
             }
             ToolType.HIGHLIGHTER -> {
-                paint.color = stroke.color
+                paint.color = drawColor
                 paint.alpha = 80 // Semi-transparent for highlighter
                 paint.strokeWidth = stroke.baseWidth * 3.5f
             }
