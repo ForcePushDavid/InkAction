@@ -22,7 +22,6 @@ data class SavedNote(
     val summary: String,
     val markdown: String,
     val tags: List<String> = emptyList(),
-    @Transient var strokes: List<com.inkaction.app.ui.canvas.InkStroke> = emptyList(),
     val timestamp: Long = System.currentTimeMillis(),
     val isPinned: Boolean = false,
     val folderId: Long? = null,
@@ -137,8 +136,7 @@ class NoteStorageManager(private val context: Context) {
             title = title,
             summary = summary,
             markdown = markdown,
-            tags = tags,
-            strokes = strokes
+            tags = tags
         )
         val currentList = _notesFlow.value.toMutableList()
         currentList.add(0, note)
@@ -162,7 +160,6 @@ class NoteStorageManager(private val context: Context) {
                 summary = summary,
                 markdown = markdown,
                 tags = tags,
-                strokes = strokes,
                 timestamp = System.currentTimeMillis()
             )
             currentList[index] = updated

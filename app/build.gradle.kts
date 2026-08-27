@@ -13,8 +13,8 @@ android {
         applicationId = "com.inkaction.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 30
-        versionName = "2.1.8"
+        versionCode = 31
+        versionName = "2.1.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
