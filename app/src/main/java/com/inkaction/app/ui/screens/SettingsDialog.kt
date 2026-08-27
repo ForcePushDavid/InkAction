@@ -72,13 +72,23 @@ fun SettingsDialog(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(
-                text = "InkAction Nastavení",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "InkAction Nastavení",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "v" + com.inkaction.app.BuildConfig.VERSION_NAME,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
             OutlinedTextField(
                 value = apiKey,
                 onValueChange = { apiKey = it },
