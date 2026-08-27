@@ -158,12 +158,6 @@ fun TodoCard(
         else -> AccentAmber
     }
 
-    val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isDone) 1f else 0f,
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 300, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-        label = "strikethrough"
-    )
-    
     val animatedColor by androidx.compose.animation.animateColorAsState(
         targetValue = if (isDone) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onBackground,
         animationSpec = androidx.compose.animation.core.tween(durationMillis = 300),
@@ -185,7 +179,7 @@ fun TodoCard(
         // Todoist style circular checkbox colored by priority
         Box(
             modifier = Modifier
-                .size(32.dp)
+                .size(48.dp)
                 .clip(androidx.compose.foundation.shape.CircleShape)
                 .clickable { onToggle() },
             contentAlignment = Alignment.Center
@@ -219,17 +213,7 @@ fun TodoCard(
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
                 color = animatedColor,
-                modifier = Modifier.drawWithContent {
-                    drawContent()
-                    if (animatedProgress > 0f) {
-                        drawLine(
-                            color = animatedColor,
-                            start = Offset(0f, size.height / 2f),
-                            end = Offset(size.width * animatedProgress, size.height / 2f),
-                            strokeWidth = 2.dp.toPx()
-                        )
-                    }
-                }
+                textDecoration = if (isDone) androidx.compose.ui.text.style.TextDecoration.LineThrough else androidx.compose.ui.text.style.TextDecoration.None
             )
 
             if (todo.dueDate.isNotBlank() && todo.dueDate != "None") {
