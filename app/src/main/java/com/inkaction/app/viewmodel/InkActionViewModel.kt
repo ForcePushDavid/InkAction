@@ -308,7 +308,6 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun loadNoteToCanvas(note: SavedNote) {
         currentStrokes.clear()
-        currentStrokes.addAll(note.strokes)
         currentNoteId = note.id
         _currentNote.value = NoteDto(
             title = note.title,
@@ -323,6 +322,15 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         currentStrokes.clear()
         currentNoteId = null
         _currentNote.value = null
+    }
+
+    fun loadStrokesForNote(noteId: Long, onLoaded: (List<com.inkaction.app.ui.canvas.InkStroke>) -> Unit) {
+        viewModelScope.launch {
+            val strokes = storageManager.loadStrokes(noteId)
+            currentStrokes.clear()
+            currentStrokes.addAll(strokes)
+            onLoaded(strokes)
+        }
     }
 
     fun saveCurrentNoteManually() {

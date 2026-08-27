@@ -330,7 +330,9 @@ fun MainWorkspaceScreen(
                             onDeleteTodo = { id -> viewModel.deleteTodo(id) },
                             onResumeDrawing = { noteToResume -> 
                                 viewModel.loadNoteToCanvas(noteToResume)
-                                inkCanvasRef?.loadStrokes(noteToResume.strokes)
+                                viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
+                                    inkCanvasRef?.loadStrokes(strokes)
+                                }
                                 phoneNavTab = 0
                             },
                             onDeleteNote = { id -> viewModel.deleteNote(id) },
@@ -366,7 +368,9 @@ fun MainWorkspaceScreen(
                             onDeleteTodo = { id -> viewModel.deleteTodo(id) },
                             onResumeDrawing = { noteToResume -> 
                                 viewModel.loadNoteToCanvas(noteToResume)
-                                inkCanvasRef?.loadStrokes(noteToResume.strokes)
+                                viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
+                                    inkCanvasRef?.loadStrokes(strokes)
+                                }
                                 phoneNavTab = 0
                             },
                             onDeleteNote = { id -> viewModel.deleteNote(id) },

@@ -22,7 +22,7 @@ data class SavedNote(
     val summary: String,
     val markdown: String,
     val tags: List<String> = emptyList(),
-    val strokes: List<com.inkaction.app.ui.canvas.InkStroke> = emptyList(),
+    @Transient var strokes: List<com.inkaction.app.ui.canvas.InkStroke> = emptyList(),
     val timestamp: Long = System.currentTimeMillis(),
     val isPinned: Boolean = false,
     val folderId: Long? = null,
@@ -62,8 +62,37 @@ class NoteStorageManager(private val context: Context) {
         try {
             if (notesFile.exists()) {
                 val json = notesFile.readText()
+                try {
+                    val jsonElement = com.google.gson.JsonParser.parseString(json)
+                    if (jsonElement.isJsonArray) {
+                        val jsonArray = jsonElement.asJsonArray
+                        var migratedAny = false
+                        for (element in jsonArray) {
+                            val obj = element.asJsonObject
+                            if (obj.has("strokes")) {
+                                val strokesElement = obj.get("strokes")
+                                if (strokesElement.isJsonArray && strokesElement.asJsonArray.size() > 0) {
+                                    val id = if (obj.has("id")) obj.get("id").asLong else System.currentTimeMillis()
+                                    val strokesFile = File(context.filesDir, "strokes_$id.json")
+                                    if (!strokesFile.exists()) {
+                                        strokesFile.writeText(gson.toJson(strokesElement))
+                                    }
+                                }
+                                obj.remove("strokes")
+                                migratedAny = true
+                            }
+                        }
+                        if (migratedAny) {
+                            notesFile.writeText(gson.toJson(jsonArray))
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                val updatedJson = notesFile.readText()
                 val type = object : TypeToken<List<SavedNote>>() {}.type
-                val notes: List<SavedNote>? = gson.fromJson(json, type)
+                val notes: List<SavedNote>? = gson.fromJson(updatedJson, type)
                 if (notes != null) _notesFlow.value = notes
             }
             if (todosFile.exists()) {
@@ -108,6 +137,7 @@ class NoteStorageManager(private val context: Context) {
         currentList.add(0, note)
         _notesFlow.value = currentList
         try {
+            saveStrokes(note.id, strokes)
             notesFile.writeText(gson.toJson(currentList))
         } catch (e: Exception) {
             e.printStackTrace()
@@ -131,6 +161,7 @@ class NoteStorageManager(private val context: Context) {
             currentList[index] = updated
             _notesFlow.value = currentList
             try {
+                saveStrokes(noteId, strokes)
                 notesFile.writeText(gson.toJson(currentList))
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -246,5 +277,27 @@ class NoteStorageManager(private val context: Context) {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    suspend fun saveStrokes(noteId: Long, strokes: List<com.inkaction.app.ui.canvas.InkStroke>) = withContext(Dispatchers.IO) {
+        try {
+            val strokesFile = File(context.filesDir, "strokes_$noteId.json")
+            strokesFile.writeText(gson.toJson(strokes))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun loadStrokes(noteId: Long): List<com.inkaction.app.ui.canvas.InkStroke> = withContext(Dispatchers.IO) {
+        try {
+            val strokesFile = File(context.filesDir, "strokes_$noteId.json")
+            if (strokesFile.exists()) {
+                val type = object : TypeToken<List<com.inkaction.app.ui.canvas.InkStroke>>() {}.type
+                return@withContext gson.fromJson(strokesFile.readText(), type) ?: emptyList()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        emptyList()
     }
 }
