@@ -177,34 +177,31 @@ fun TodoCard(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Todoist style circular checkbox colored by priority
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(androidx.compose.foundation.shape.CircleShape)
-                .clickable { onToggle() },
-            contentAlignment = Alignment.Center
+        IconButton(
+            onClick = onToggle,
+            modifier = Modifier.size(48.dp)
         ) {
             Box(
                 modifier = Modifier
                     .size(20.dp)
                     .clip(androidx.compose.foundation.shape.CircleShape)
-                .border(
-                    width = 2.dp, 
-                    color = if (isDone) MaterialTheme.colorScheme.outline else priorityColor, 
-                    shape = androidx.compose.foundation.shape.CircleShape
-                )
-                .background(if (isDone) MaterialTheme.colorScheme.outline else androidx.compose.ui.graphics.Color.Transparent),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isDone) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.size(14.dp)
-                )
+                    .border(
+                        width = 2.dp, 
+                        color = if (isDone) MaterialTheme.colorScheme.outline else priorityColor, 
+                        shape = androidx.compose.foundation.shape.CircleShape
+                    )
+                    .background(if (isDone) MaterialTheme.colorScheme.outline else androidx.compose.ui.graphics.Color.Transparent),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isDone) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
             }
-        }
         }
 
         Column(modifier = Modifier.weight(1f)) {
