@@ -413,22 +413,30 @@ fun SavedNoteCard(
             verticalAlignment = Alignment.Top
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.Top) {
+                Text(
+                    text = savedNote.title.ifBlank { "Nová poznámka" },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                val sdf = java.text.SimpleDateFormat("dd. MM. yyyy, HH:mm", java.util.Locale.getDefault())
+                val dateString = sdf.format(java.util.Date(savedNote.timestamp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = savedNote.title.ifBlank { "Nová poznámka" },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.weight(1f)
+                        text = "Syntetizováno: $dateString",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
                     )
-                    
+
                     if (savedNote.folderId != null) {
                         val folder = folders.find { it.id == savedNote.folderId }
                         if (folder != null) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Box(
                                 modifier = Modifier
-                                    .padding(top = 4.dp)
                                     .clip(RoundedCornerShape(4.dp))
                                     .background(androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(folder.colorHex)))
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
@@ -438,15 +446,6 @@ fun SavedNoteCard(
                         }
                     }
                 }
-
-                val sdf = java.text.SimpleDateFormat("dd. MM. yyyy, HH:mm", java.util.Locale.getDefault())
-                val dateString = sdf.format(java.util.Date(savedNote.timestamp))
-
-                Text(
-                    text = "Syntetizováno: $dateString",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 // Folder Dropdown
