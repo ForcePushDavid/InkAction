@@ -31,8 +31,7 @@ class GeminiAgentEngine(
      */
     fun processInkBitmap(bitmaps: List<Bitmap>, language: String, existingTodos: String = "", existingEvents: String = ""): Flow<AgentPipelineStatus> = flow {
         if (apiKey.isBlank()) {
-            emit(AgentPipelineStatus.Processing("demo", "No API key configured - running Smart Demo..."))
-            emit(runMockPipeline())
+            emit(AgentPipelineStatus.Error("Gemini API kľúč nie je nastavený. Prosím, nastavte ho v nastaveniach."))
             return@flow
         }
 

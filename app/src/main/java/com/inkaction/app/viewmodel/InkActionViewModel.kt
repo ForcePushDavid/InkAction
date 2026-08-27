@@ -254,9 +254,9 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun toggleTodo(todoId: String, currentStatus: Boolean) {
+    fun toggleTodo(todoId: String, newStatus: Boolean) {
         viewModelScope.launch {
-            storageManager.updateTodoCompletion(todoId, !currentStatus)
+            storageManager.updateTodoCompletion(todoId, newStatus)
         }
     }
 

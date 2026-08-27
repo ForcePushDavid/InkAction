@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
             InkActionTheme(isDarkTheme = isDarkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = BgDark
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.background
                 ) {
                     MainWorkspaceScreen(viewModel = viewModel)
                 }
