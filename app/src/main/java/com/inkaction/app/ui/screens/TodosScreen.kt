@@ -27,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +35,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import com.inkaction.app.data.SavedTodo
 import com.inkaction.app.ui.theme.AccentAmber
 import com.inkaction.app.ui.theme.AccentRed
@@ -43,6 +46,7 @@ fun TodosScreen(
     todos: List<SavedTodo>,
     onToggleTodo: (String, Boolean) -> Unit,
     onDeleteTodo: (String) -> Unit,
+    onNavigateToNote: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (todos.isEmpty()) {
@@ -71,8 +75,9 @@ fun TodosScreen(
         return
     }
 
-    val activeTodos = todos.filter { !it.isCompleted }.sortedByDescending { it.timestamp }
-    val completedTodos = todos.filter { it.isCompleted }.sortedByDescending { it.timestamp }
+    val recentlyCompleted = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    val activeTodos = todos.filter { !it.isCompleted || recentlyCompleted.contains(it.id) }.sortedByDescending { it.timestamp }
+    val completedTodos = todos.filter { it.isCompleted && !recentlyCompleted.contains(it.id) }.sortedByDescending { it.timestamp }
 
     LazyColumn(
         modifier = modifier
@@ -93,8 +98,17 @@ fun TodosScreen(
             items(activeTodos, key = { it.id.ifBlank { "${it.timestamp}_${it.text.hashCode()}" } }) { todo ->
                 TodoCard(
                     todo = todo, 
-                    onToggle = { onToggleTodo(todo.id, todo.isCompleted) },
-                    onDelete = { onDeleteTodo(todo.id) }
+                    onToggle = { 
+                        val newStatus = !todo.isCompleted
+                        onToggleTodo(todo.id, newStatus)
+                        if (newStatus) {
+                            recentlyCompleted.add(todo.id)
+                        } else {
+                            recentlyCompleted.remove(todo.id)
+                        }
+                    },
+                    onDelete = { onDeleteTodo(todo.id) },
+                    onNavigateToNote = if (todo.noteId != null) { { onNavigateToNote(todo.noteId) } } else null
                 )
             }
         }
@@ -113,8 +127,17 @@ fun TodosScreen(
             items(completedTodos, key = { "${it.id}_completed" }) { todo ->
                 TodoCard(
                     todo = todo, 
-                    onToggle = { onToggleTodo(todo.id, todo.isCompleted) },
-                    onDelete = { onDeleteTodo(todo.id) }
+                    onToggle = { 
+                        val newStatus = !todo.isCompleted
+                        onToggleTodo(todo.id, newStatus)
+                        if (newStatus) {
+                            recentlyCompleted.add(todo.id)
+                        } else {
+                            recentlyCompleted.remove(todo.id)
+                        }
+                    },
+                    onDelete = { onDeleteTodo(todo.id) },
+                    onNavigateToNote = if (todo.noteId != null) { { onNavigateToNote(todo.noteId) } } else null
                 )
             }
         }
@@ -125,7 +148,8 @@ fun TodosScreen(
 fun TodoCard(
     todo: SavedTodo,
     onToggle: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onNavigateToNote: (() -> Unit)? = null
 ) {
     val isDone = todo.isCompleted
     val priorityColor = when (todo.priority.lowercase()) {
@@ -134,12 +158,26 @@ fun TodoCard(
         else -> AccentAmber
     }
 
+    val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isDone) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 300, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "strikethrough"
+    )
+    
+    val animatedColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isDone) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onBackground,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 300),
+        label = "color"
+    )
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(if (isDone) MaterialTheme.colorScheme.surface.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface)
-            .clickable { onToggle() }
+            .then(
+                if (onNavigateToNote != null) Modifier.clickable { onNavigateToNote() } else Modifier
+            )
             .padding(vertical = 12.dp, horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -147,8 +185,15 @@ fun TodoCard(
         // Todoist style circular checkbox colored by priority
         Box(
             modifier = Modifier
-                .size(20.dp)
+                .size(32.dp)
                 .clip(androidx.compose.foundation.shape.CircleShape)
+                .clickable { onToggle() },
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
                 .border(
                     width = 2.dp, 
                     color = if (isDone) MaterialTheme.colorScheme.outline else priorityColor, 
@@ -166,14 +211,25 @@ fun TodoCard(
                 )
             }
         }
+        }
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = todo.text,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (isDone) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onBackground,
-                textDecoration = if (isDone) TextDecoration.LineThrough else TextDecoration.None
+                color = animatedColor,
+                modifier = Modifier.drawWithContent {
+                    drawContent()
+                    if (animatedProgress > 0f) {
+                        drawLine(
+                            color = animatedColor,
+                            start = Offset(0f, size.height / 2f),
+                            end = Offset(size.width * animatedProgress, size.height / 2f),
+                            strokeWidth = 2.dp.toPx()
+                        )
+                    }
+                }
             )
 
             if (todo.dueDate.isNotBlank() && todo.dueDate != "None") {

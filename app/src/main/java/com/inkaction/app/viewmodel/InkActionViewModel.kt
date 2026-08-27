@@ -241,7 +241,8 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                                     priority = it.priority,
                                     dueDate = it.dueDate,
                                     isCompleted = it.completed,
-                                    timestamp = baseTimestamp + idx
+                                    timestamp = baseTimestamp + idx,
+                                    noteId = currentNoteId
                                 )
                             }
                         )

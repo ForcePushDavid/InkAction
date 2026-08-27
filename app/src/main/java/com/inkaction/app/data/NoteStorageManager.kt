@@ -35,7 +35,8 @@ data class SavedTodo(
     val priority: String,
     val dueDate: String,
     var isCompleted: Boolean = false,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val noteId: Long? = null
 )
 
 data class MigrationNote(

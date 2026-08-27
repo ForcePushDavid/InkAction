@@ -665,7 +665,17 @@ fun ActionsPaneContent(
                     onTogglePin = onTogglePin,
                     onEnhanceNote = onEnhanceNote
                 )
-                1 -> TodosScreen(todos = todos, onToggleTodo = onToggleTodo, onDeleteTodo = onDeleteTodo)
+                1 -> TodosScreen(
+                    todos = todos, 
+                    onToggleTodo = onToggleTodo, 
+                    onDeleteTodo = onDeleteTodo,
+                    onNavigateToNote = { noteId ->
+                        val noteToResume = allNotes.find { it.id == noteId }
+                        if (noteToResume != null) {
+                            onResumeDrawing(noteToResume)
+                        }
+                    }
+                )
                 2 -> CalendarScreen(events = events)
             }
         }
