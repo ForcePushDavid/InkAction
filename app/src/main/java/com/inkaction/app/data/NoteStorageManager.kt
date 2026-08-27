@@ -38,6 +38,11 @@ data class SavedTodo(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+data class MigrationNote(
+    val id: Long,
+    val strokes: List<com.inkaction.app.ui.canvas.InkStroke>? = null
+)
+
 class NoteStorageManager(private val context: Context) {
 
     private val gson = Gson()
@@ -61,39 +66,40 @@ class NoteStorageManager(private val context: Context) {
     private fun loadData() {
         try {
             if (notesFile.exists()) {
-                val json = notesFile.readText()
                 try {
-                    val jsonElement = com.google.gson.JsonParser.parseString(json)
-                    if (jsonElement.isJsonArray) {
-                        val jsonArray = jsonElement.asJsonArray
-                        var migratedAny = false
-                        for (element in jsonArray) {
-                            val obj = element.asJsonObject
-                            if (obj.has("strokes")) {
-                                val strokesElement = obj.get("strokes")
-                                if (strokesElement.isJsonArray && strokesElement.asJsonArray.size() > 0) {
-                                    val id = if (obj.has("id")) obj.get("id").asLong else System.currentTimeMillis()
-                                    val strokesFile = File(context.filesDir, "strokes_$id.json")
-                                    if (!strokesFile.exists()) {
-                                        strokesFile.writeText(gson.toJson(strokesElement))
-                                    }
+                    var needsMigration = false
+                    java.io.FileReader(notesFile).use { reader ->
+                        val migrationType = object : TypeToken<List<MigrationNote>>() {}.type
+                        val migrationNotes: List<MigrationNote>? = gson.fromJson(reader, migrationType)
+                        migrationNotes?.forEach { migrationNote ->
+                            if (!migrationNote.strokes.isNullOrEmpty()) {
+                                val strokesFile = File(context.filesDir, "strokes_${migrationNote.id}.json")
+                                if (!strokesFile.exists()) {
+                                    strokesFile.writeText(gson.toJson(migrationNote.strokes))
                                 }
-                                obj.remove("strokes")
-                                migratedAny = true
+                                needsMigration = true
                             }
                         }
-                        if (migratedAny) {
-                            notesFile.writeText(gson.toJson(jsonArray))
+                    }
+
+                    if (needsMigration) {
+                        java.io.FileReader(notesFile).use { reader ->
+                            val type = object : TypeToken<List<SavedNote>>() {}.type
+                            val notesWithoutStrokes: List<SavedNote>? = gson.fromJson(reader, type)
+                            if (notesWithoutStrokes != null) {
+                                notesFile.writeText(gson.toJson(notesWithoutStrokes))
+                            }
                         }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
 
-                val updatedJson = notesFile.readText()
-                val type = object : TypeToken<List<SavedNote>>() {}.type
-                val notes: List<SavedNote>? = gson.fromJson(updatedJson, type)
-                if (notes != null) _notesFlow.value = notes
+                java.io.FileReader(notesFile).use { reader ->
+                    val type = object : TypeToken<List<SavedNote>>() {}.type
+                    val notes: List<SavedNote>? = gson.fromJson(reader, type)
+                    if (notes != null) _notesFlow.value = notes
+                }
             }
             if (todosFile.exists()) {
                 val json = todosFile.readText()
