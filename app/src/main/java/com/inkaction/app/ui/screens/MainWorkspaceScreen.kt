@@ -482,12 +482,33 @@ fun CanvasPaneContent(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            var generateNote by remember { mutableStateOf(true) }
+            
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .clickable { generateNote = !generateNote }
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                    .padding(end = 12.dp)
+            ) {
+                androidx.compose.material3.Checkbox(
+                    checked = generateNote,
+                    onCheckedChange = { generateNote = it },
+                    colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+                )
+                Text("Vytvořit poznámku", fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
+            }
+            
+            Spacer(modifier = Modifier.width(12.dp))
+
             Button(
                 onClick = { 
                     if (!autoPushState.isProcessing) {
                         viewModel.triggerActionize(
                             bitmaps = canvasViewRef?.createOcrBitmaps() ?: emptyList(),
-                            strokes = canvasViewRef?.strokes?.toList() ?: emptyList()
+                            strokes = canvasViewRef?.strokes?.toList() ?: emptyList(),
+                            generateNote = generateNote
                         ) 
                     }
                 },

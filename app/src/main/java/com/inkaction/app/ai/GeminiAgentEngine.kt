@@ -29,7 +29,7 @@ class GeminiAgentEngine(
     /**
      * Executes multi-agent multimodal processing on handwritten bitmap
      */
-    fun processInkBitmap(bitmaps: List<Bitmap>, language: String, existingTodos: String = "", existingEvents: String = ""): Flow<AgentPipelineStatus> = flow {
+    fun processInkBitmap(bitmaps: List<Bitmap>, language: String, existingTodos: String = "", existingEvents: String = "", generateNote: Boolean = true): Flow<AgentPipelineStatus> = flow {
         if (apiKey.isBlank()) {
             emit(AgentPipelineStatus.Error("Gemini API kľúč nie je nastavený. Prosím, nastavte ho v nastaveniach."))
             return@flow
@@ -57,7 +57,9 @@ class GeminiAgentEngine(
                 deduplicationPrompt = "\n\nDEDUPLICATION DIRECTIVE: The user already has the following items extracted from previous sessions. DO NOT output these again. Only output NEW events and NEW todos.\nExisting Todos: $existingTodos\nExisting Events: $existingEvents"
             }
             
-            val fullPrompt = "${AgentPrompts.MULTI_AGENT_SYSTEM_PROMPT}\n\nCurrent Date and Time: $currentDateTime\nUse this current date and time for interpreting relative dates like 'tomorrow' or 'next friday', and include it in the synthesized note summary or title if appropriate.\nAlso, ANY mention of a date, deadline, meeting, or time MUST be added to the 'events' array so the user can be suggested to add it to their calendar.\n\nLanguage Directive: $languageInstruction$deduplicationPrompt"
+            val noteDirective = if (!generateNote) "\n\nCRITICAL DIRECTIVE: DO NOT GENERATE A NOTE. The user explicitly requested to skip note generation. Set the 'note' object in JSON to null. ONLY extract todos, events, and topics." else ""
+            
+            val fullPrompt = "${AgentPrompts.MULTI_AGENT_SYSTEM_PROMPT}\n\nCurrent Date and Time: $currentDateTime\nUse this current date and time for interpreting relative dates like 'tomorrow' or 'next friday', and include it in the synthesized note summary or title if appropriate.\nAlso, ANY mention of a date, deadline, meeting, or time MUST be added to the 'events' array so the user can be suggested to add it to their calendar.\n\nLanguage Directive: $languageInstruction$deduplicationPrompt$noteDirective"
 
             val inputContent = content {
                 text(fullPrompt)

@@ -185,7 +185,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun triggerActionize(bitmaps: List<Bitmap>, strokes: List<com.inkaction.app.ui.canvas.InkStroke> = emptyList()) {
+    fun triggerActionize(bitmaps: List<Bitmap>, strokes: List<com.inkaction.app.ui.canvas.InkStroke> = emptyList(), generateNote: Boolean = true) {
         cancelCountdown()
         if (bitmaps.isEmpty()) return
 
@@ -195,12 +195,16 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         val existingEventsStr = events.value.joinToString(", ") { "${it.title} on ${it.date}" }
 
         viewModelScope.launch {
-            geminiEngine.processInkBitmap(bitmaps, noteLanguage, existingTodosStr, existingEventsStr).collect { status ->
+            geminiEngine.processInkBitmap(bitmaps, noteLanguage, existingTodosStr, existingEventsStr, generateNote).collect { status ->
                 _pipelineStatus.value = status
 
                 if (status is AgentPipelineStatus.Success) {
                     val res = status.response
-                    _currentNote.value = res.note
+                    
+                    if (generateNote) {
+                        _currentNote.value = res.note
+                    }
+                    
                     _events.value = res.events
                     _autoPushState.value = AutoPushUiState(isProcessing = false)
 
@@ -211,24 +215,26 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                     }
                     
                     // Persist to local storage
-                    res.note?.let { note ->
-                        if (currentNoteId != null) {
-                            storageManager.updateNote(
-                                noteId = currentNoteId!!,
-                                title = note.title,
-                                summary = note.summary,
-                                markdown = note.markdown,
-                                tags = note.tags,
-                                strokes = strokes
-                            )
-                        } else {
-                            currentNoteId = storageManager.saveNote(
-                                title = note.title,
-                                summary = note.summary,
-                                markdown = note.markdown,
-                                tags = note.tags,
-                                strokes = strokes
-                            )
+                    if (generateNote) {
+                        res.note?.let { note ->
+                            if (currentNoteId != null) {
+                                storageManager.updateNote(
+                                    noteId = currentNoteId!!,
+                                    title = note.title,
+                                    summary = note.summary,
+                                    markdown = note.markdown,
+                                    tags = note.tags,
+                                    strokes = strokes
+                                )
+                            } else {
+                                currentNoteId = storageManager.saveNote(
+                                    title = note.title,
+                                    summary = note.summary,
+                                    markdown = note.markdown,
+                                    tags = note.tags,
+                                    strokes = strokes
+                                )
+                            }
                         }
                     }
                     if (res.todos.isNotEmpty()) {
