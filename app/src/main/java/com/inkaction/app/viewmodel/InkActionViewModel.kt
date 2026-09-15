@@ -82,6 +82,8 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         private set
     var themeMode by mutableStateOf("system") // "system", "dark", "light"
         private set
+    var defaultEventTime: String = "08:00"
+        private set
 
     var canvasTemplate by mutableStateOf(0)
         private set
@@ -100,6 +102,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         remindersEnabled = prefs.getBoolean("reminders_enabled", false)
         noteLanguage = prefs.getString("note_language", "Auto-detect") ?: "Auto-detect"
         themeMode = prefs.getString("theme_mode", "system") ?: "system"
+        defaultEventTime = prefs.getString("default_event_time", "08:00") ?: "08:00"
         // Natvrdo nastavíme 10 minut, aby se přepsaly případné starší uložené hodnoty
         debounceDurationMs = 600000L 
         prefs.edit().putLong("debounce_ms", 600000L).apply()
@@ -107,13 +110,14 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         geminiEngine.updateConfig(apiKey, modelName)
     }
 
-    fun saveSettings(newKey: String, newModel: String, newDebounce: Long, reminders: Boolean, language: String, newThemeMode: String) {
+    fun saveSettings(newKey: String, newModel: String, newDebounce: Long, reminders: Boolean, language: String, newThemeMode: String, newDefaultEventTime: String) {
         apiKey = newKey
         modelName = newModel
         debounceDurationMs = 600000L // Keep hardcoded 10 mins
         remindersEnabled = reminders
         noteLanguage = language
         themeMode = newThemeMode
+        defaultEventTime = newDefaultEventTime
 
         prefs.edit()
             .putString("api_key", newKey)
@@ -122,6 +126,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
             .putBoolean("reminders_enabled", reminders)
             .putString("note_language", language)
             .putString("theme_mode", newThemeMode)
+            .putString("default_event_time", newDefaultEventTime)
             .apply()
 
         geminiEngine.updateConfig(newKey, newModel)
@@ -185,7 +190,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun triggerActionize(bitmaps: List<Bitmap>, strokes: List<com.inkaction.app.ui.canvas.InkStroke> = emptyList(), generateNote: Boolean = true) {
+    fun triggerActionize(bitmaps: List<Bitmap>, strokes: List<com.inkaction.app.ui.canvas.InkStroke> = emptyList(), generateNote: Boolean = true, generateTodos: Boolean = true) {
         cancelCountdown()
         if (bitmaps.isEmpty()) return
 
@@ -195,7 +200,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         val existingEventsStr = events.value.joinToString(", ") { "${it.title} on ${it.date}" }
 
         viewModelScope.launch {
-            geminiEngine.processInkBitmap(bitmaps, noteLanguage, existingTodosStr, existingEventsStr, generateNote).collect { status ->
+            geminiEngine.processInkBitmap(bitmaps, noteLanguage, existingTodosStr, existingEventsStr, generateNote, generateTodos, defaultEventTime).collect { status ->
                 _pipelineStatus.value = status
 
                 if (status is AgentPipelineStatus.Success) {
@@ -237,7 +242,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                             }
                         }
                     }
-                    if (res.todos.isNotEmpty()) {
+                    if (generateTodos && res.todos.isNotEmpty()) {
                         val baseTimestamp = System.currentTimeMillis()
                         storageManager.saveTodos(
                             res.todos.mapIndexed { idx, it ->

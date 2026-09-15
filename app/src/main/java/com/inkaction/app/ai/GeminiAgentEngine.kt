@@ -29,7 +29,7 @@ class GeminiAgentEngine(
     /**
      * Executes multi-agent multimodal processing on handwritten bitmap
      */
-    fun processInkBitmap(bitmaps: List<Bitmap>, language: String, existingTodos: String = "", existingEvents: String = "", generateNote: Boolean = true): Flow<AgentPipelineStatus> = flow {
+    fun processInkBitmap(bitmaps: List<Bitmap>, language: String, existingTodos: String = "", existingEvents: String = "", generateNote: Boolean = true, generateTodos: Boolean = true, defaultEventTime: String = "08:00"): Flow<AgentPipelineStatus> = flow {
         if (apiKey.isBlank()) {
             emit(AgentPipelineStatus.Error("Gemini API kľúč nie je nastavený. Prosím, nastavte ho v nastaveniach."))
             return@flow
@@ -58,8 +58,17 @@ class GeminiAgentEngine(
             }
             
             val noteDirective = if (!generateNote) "\n\nCRITICAL DIRECTIVE: DO NOT GENERATE A NOTE. The user explicitly requested to skip note generation. Set the 'note' object in JSON to null. ONLY extract todos, events, and topics." else ""
+            val todosDirective = if (!generateTodos) "\n\nCRITICAL DIRECTIVE: DO NOT EXTRACT TODOS. The user explicitly requested to skip todo generation. Set the 'todos' array in JSON to an empty array []. ONLY extract note, events, and topics." else ""
             
-            val fullPrompt = "${AgentPrompts.MULTI_AGENT_SYSTEM_PROMPT}\n\nCurrent Date and Time: $currentDateTime\nUse this current date and time for interpreting relative dates like 'tomorrow' or 'next friday', and include it in the synthesized note summary or title if appropriate.\nAlso, ANY mention of a date, deadline, meeting, or time MUST be added to the 'events' array so the user can be suggested to add it to their calendar.\n\nLanguage Directive: $languageInstruction$deduplicationPrompt$noteDirective"
+            val calendarDirective = """
+                
+                CALENDAR AND TODO DIRECTIVE:
+                1. For ANY date you extract (in events OR todos), you MUST strictly convert it to 'YYYY-MM-DD' format based on the current date context. Do not output words like 'tomorrow'.
+                2. If an event or a timed-todo does not have a specific time of day mentioned, use the user's default time: $defaultEventTime.
+                3. If you extract a Todo that contains ANY time expression or deadline (e.g., 'tomorrow afternoon', 'today', 'Friday'), you MUST ALSO create an entry for it in the 'events' array so the user receives a calendar reminder.
+            """.trimIndent()
+            
+            val fullPrompt = "${AgentPrompts.MULTI_AGENT_SYSTEM_PROMPT}\n\nCurrent Date and Time: $currentDateTime\nUse this current date and time for interpreting relative dates like 'tomorrow' or 'next friday', and include it in the synthesized note summary or title if appropriate.\n\nLanguage Directive: $languageInstruction$deduplicationPrompt$noteDirective$todosDirective$calendarDirective"
 
             val inputContent = content {
                 text(fullPrompt)

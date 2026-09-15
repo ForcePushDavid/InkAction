@@ -144,9 +144,10 @@ fun MainWorkspaceScreen(
             initialReminders = viewModel.remindersEnabled,
             initialLanguage = viewModel.noteLanguage,
             initialThemeMode = viewModel.themeMode,
+            initialDefaultEventTime = viewModel.defaultEventTime,
             onDismiss = { showSettings = false },
-            onSave = { key, model, debounce, reminders, language, themeMode ->
-                viewModel.saveSettings(key, model, debounce, reminders, language, themeMode)
+            onSave = { key, model, debounce, reminders, language, themeMode, defaultTime ->
+                viewModel.saveSettings(key, model, debounce, reminders, language, themeMode, defaultTime)
                 showSettings = false
             },
             onExportBackup = {
@@ -483,6 +484,7 @@ fun CanvasPaneContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             var generateNote by remember { mutableStateOf(true) }
+            var generateTodos by remember { mutableStateOf(true) }
             
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -497,7 +499,25 @@ fun CanvasPaneContent(
                     onCheckedChange = { generateNote = it },
                     colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                 )
-                Text("Vytvořit poznámku", fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
+                Text("Poznámka", fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
+            }
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .clickable { generateTodos = !generateTodos }
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                    .padding(end = 12.dp)
+            ) {
+                androidx.compose.material3.Checkbox(
+                    checked = generateTodos,
+                    onCheckedChange = { generateTodos = it },
+                    colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+                )
+                Text("Úkoly", fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
             }
             
             Spacer(modifier = Modifier.width(12.dp))
@@ -508,7 +528,8 @@ fun CanvasPaneContent(
                         viewModel.triggerActionize(
                             bitmaps = canvasViewRef?.createOcrBitmaps() ?: emptyList(),
                             strokes = canvasViewRef?.strokes?.toList() ?: emptyList(),
-                            generateNote = generateNote
+                            generateNote = generateNote,
+                            generateTodos = generateTodos
                         ) 
                     }
                 },

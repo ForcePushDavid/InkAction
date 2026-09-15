@@ -41,8 +41,9 @@ fun SettingsDialog(
     initialReminders: Boolean,
     initialLanguage: String,
     initialThemeMode: String,
+    initialDefaultEventTime: String,
     onDismiss: () -> Unit,
-    onSave: (apiKey: String, model: String, debounceMs: Long, reminders: Boolean, language: String, themeMode: String) -> Unit,
+    onSave: (apiKey: String, model: String, debounceMs: Long, reminders: Boolean, language: String, themeMode: String, defaultEventTime: String) -> Unit,
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit
 ) {
@@ -52,6 +53,7 @@ fun SettingsDialog(
     var remindersEnabled by remember { mutableStateOf(initialReminders) }
     var language by remember { mutableStateOf(initialLanguage) }
     var themeMode by remember { mutableStateOf(initialThemeMode) }
+    var defaultEventTime by remember { mutableStateOf(initialDefaultEventTime) }
     var modelExpanded by remember { mutableStateOf(false) }
     var languageExpanded by remember { mutableStateOf(false) }
 
@@ -215,6 +217,20 @@ fun SettingsDialog(
                 )
             }
 
+            OutlinedTextField(
+                value = defaultEventTime,
+                onValueChange = { defaultEventTime = it },
+                label = { Text("Výchozí čas událostí (HH:MM)") },
+                placeholder = { Text("08:00") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Text(
+                text = "Tento čas se použije, pokud AI nenajde v textu přesnou hodinu.",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.outline
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(text = "Záloha a obnova", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -239,7 +255,7 @@ fun SettingsDialog(
                     Text("Zrušit", color = MaterialTheme.colorScheme.outline)
                 }
                 Button(
-                    onClick = { onSave(apiKey, model, debounceMs, remindersEnabled, language, themeMode) },
+                    onClick = { onSave(apiKey, model, debounceMs, remindersEnabled, language, themeMode, defaultEventTime) },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text("Uložit a použít")
