@@ -70,10 +70,9 @@ fun SettingsDialog(
 
     // Výchozí modely, pokud selže stahování nebo klíč není zadán
     val defaultModels = listOf(
-        Triple("gemini-3.5-flash-lite", "Gemini 3.5 Flash Lite (Výchozí)", "🚀 15 RPM / 500 RPD | Rychlý, pro běžné psaní"),
-        Triple("gemini-3.7-flash", "Gemini 3.7 Flash", "🧠 5 RPM / 20 RPD | Nejchytřejší, bacha na limit"),
-        Triple("gemini-3.6-flash", "Gemini 3.6 Flash", "⚡ 5 RPM / 20 RPD | Multimodální standard"),
-        Triple("gemini-3.5-flash", "Gemini 3.5 Flash", "⚡ 5 RPM / 20 RPD | Starší standard")
+        Triple("gemini-3.8-flash", "Gemini 3.8 Flash (Výchozí)", "🚀 Výchozí standardní model"),
+        Triple("gemini-3.8-pro", "Gemini 3.8 Pro", "🧠 Chytřejší, vhodný pro složitější úlohy"),
+        Triple("gemini-2.5-flash", "Gemini 2.5 Flash", "⚡ Starší rychlý model")
     )
     var activeModels by remember { mutableStateOf(defaultModels) }
     var isFetchingModels by remember { mutableStateOf(false) }

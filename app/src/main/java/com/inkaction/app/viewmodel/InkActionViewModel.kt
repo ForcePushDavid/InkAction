@@ -78,7 +78,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
 
     var apiKey: String = ""
         private set
-    var modelName: String = "gemini-3.5-flash-lite"
+    var modelName: String = "gemini-3.8-flash"
         private set
     var themeMode by mutableStateOf("system") // "system", "dark", "light"
         private set
@@ -98,7 +98,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun loadSettings() {
         apiKey = prefs.getString("api_key", "") ?: ""
-        modelName = prefs.getString("model_name", "gemini-3.5-flash-lite") ?: "gemini-3.5-flash-lite"
+        modelName = prefs.getString("model_name", "gemini-3.8-flash") ?: "gemini-3.8-flash"
         remindersEnabled = prefs.getBoolean("reminders_enabled", false)
         noteLanguage = prefs.getString("note_language", "Auto-detect") ?: "Auto-detect"
         themeMode = prefs.getString("theme_mode", "system") ?: "system"
