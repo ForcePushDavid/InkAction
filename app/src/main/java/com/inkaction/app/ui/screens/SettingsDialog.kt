@@ -21,7 +21,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,7 +34,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.layout.size
 import com.inkaction.app.ui.theme.AccentGreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.URL
+import java.net.HttpURLConnection
+import java.io.InputStreamReader
+import com.google.gson.JsonParser
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,13 +68,53 @@ fun SettingsDialog(
     var modelExpanded by remember { mutableStateOf(false) }
     var languageExpanded by remember { mutableStateOf(false) }
 
-    // Seznam modelů s přesným rozepsáním RPM (dotazy za minutu) a RPD (dotazy za den)
-    val activeModels = listOf(
+    // Výchozí modely, pokud selže stahování nebo klíč není zadán
+    val defaultModels = listOf(
         Triple("gemini-3.5-flash-lite", "Gemini 3.5 Flash Lite (Výchozí)", "🚀 15 RPM / 500 RPD | Rychlý, pro běžné psaní"),
         Triple("gemini-3.7-flash", "Gemini 3.7 Flash", "🧠 5 RPM / 20 RPD | Nejchytřejší, bacha na limit"),
         Triple("gemini-3.6-flash", "Gemini 3.6 Flash", "⚡ 5 RPM / 20 RPD | Multimodální standard"),
         Triple("gemini-3.5-flash", "Gemini 3.5 Flash", "⚡ 5 RPM / 20 RPD | Starší standard")
     )
+    var activeModels by remember { mutableStateOf(defaultModels) }
+    var isFetchingModels by remember { mutableStateOf(false) }
+
+    LaunchedEffect(apiKey) {
+        if (apiKey.isNotBlank() && apiKey.length > 10) {
+            isFetchingModels = true
+            val fetchedModels = withContext(Dispatchers.IO) {
+                try {
+                    val url = URL("https://generativelanguage.googleapis.com/v1beta/models?key=$apiKey")
+                    val conn = url.openConnection() as HttpURLConnection
+                    conn.requestMethod = "GET"
+                    conn.connectTimeout = 5000
+                    conn.readTimeout = 5000
+                    val reader = InputStreamReader(conn.inputStream)
+                    val jsonObject = JsonParser.parseReader(reader).asJsonObject
+                    val modelsArray = jsonObject.getAsJsonArray("models")
+                    
+                    val result = mutableListOf<Triple<String, String, String>>()
+                    for (item in modelsArray) {
+                        val m = item.asJsonObject
+                        val name = m.get("name").asString.removePrefix("models/")
+                        if (!name.startsWith("gemini")) continue
+                        
+                        val methods = m.getAsJsonArray("supportedGenerationMethods")
+                        val supportsGeneration = methods.map { it.asString }.contains("generateContent")
+                        if (!supportsGeneration) continue
+                        
+                        val displayName = if (m.has("displayName")) m.get("displayName").asString else name
+                        val description = if (m.has("description")) m.get("description").asString else ""
+                        result.add(Triple(name, displayName, description))
+                    }
+                    if (result.isNotEmpty()) result else defaultModels
+                } catch (e: Exception) {
+                    defaultModels
+                }
+            }
+            activeModels = fetchedModels
+            isFetchingModels = false
+        }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -117,7 +166,13 @@ fun SettingsDialog(
                     value = model,
                     onValueChange = { model = it },
                     label = { Text("Aktivní Gemini Model") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
+                    trailingIcon = { 
+                        if (isFetchingModels) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) 
+                        }
+                    },
                     modifier = Modifier
                         .menuAnchor()
                         .fillMaxWidth()
