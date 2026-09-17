@@ -13,8 +13,8 @@ android {
         applicationId = "com.inkaction.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 40
-        versionName = "2.2.8"
+        versionCode = 41
+        versionName = "2.2.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -80,4 +80,7 @@ dependencies {
     
     // JSON Serialization
     implementation(libs.gson)
+    
+    // WorkManager
+    implementation(libs.work.runtime.ktx)
 }

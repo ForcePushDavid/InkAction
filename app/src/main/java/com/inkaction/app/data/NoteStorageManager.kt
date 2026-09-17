@@ -25,7 +25,8 @@ data class SavedNote(
     val timestamp: Long = System.currentTimeMillis(),
     val isPinned: Boolean = false,
     val folderId: Long? = null,
-    val aiEnhancement: String? = null
+    val aiEnhancement: String? = null,
+    val isArchived: Boolean = false
 )
 
 data class SavedTodo(
@@ -35,7 +36,8 @@ data class SavedTodo(
     val dueDate: String,
     var isCompleted: Boolean = false,
     val timestamp: Long = System.currentTimeMillis(),
-    val noteId: Long? = null
+    val noteId: Long? = null,
+    val isArchived: Boolean = false
 )
 
 data class MigrationNote(
@@ -215,6 +217,31 @@ class NoteStorageManager(private val context: Context) {
         _notesFlow.value = currentList
         try {
             notesFile.writeText(gson.toJson(currentList))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun archiveNote(noteId: Long, archived: Boolean = true) = withContext(Dispatchers.IO) {
+        val currentList = _notesFlow.value.map {
+            if (it.id == noteId) it.copy(isArchived = archived) else it
+        }
+        _notesFlow.value = currentList
+        try {
+            notesFile.writeText(gson.toJson(currentList))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun archiveTodo(todoId: String, archived: Boolean = true) = withContext(Dispatchers.IO) {
+        val currentList = _todosFlow.value.map {
+            if (it.id == todoId) it.copy(isArchived = archived) else it
+        }
+        _todosFlow.value = currentList
+        try {
+            todosFile.writeText(gson.toJson(currentList))
+            updateWidget()
         } catch (e: Exception) {
             e.printStackTrace()
         }

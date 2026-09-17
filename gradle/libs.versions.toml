@@ -28,6 +28,7 @@ room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version = "2.9.0" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

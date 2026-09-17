@@ -29,7 +29,7 @@ class GeminiAgentEngine(
     /**
      * Executes multi-agent multimodal processing on handwritten bitmap
      */
-    fun processInkBitmap(bitmaps: List<Bitmap>, language: String, existingTodos: String = "", existingEvents: String = "", generateNote: Boolean = true, generateTodos: Boolean = true, defaultEventTime: String = "08:00"): Flow<AgentPipelineStatus> = flow {
+    fun processInkBitmap(bitmaps: List<Bitmap>, language: String, existingTodos: String = "", existingEvents: String = "", generateNote: Boolean = true, generateTodos: Boolean = true, defaultEventTime: String = "08:00", isOfflineRetry: Boolean = false): Flow<AgentPipelineStatus> = flow {
         if (apiKey.isBlank()) {
             emit(AgentPipelineStatus.Error("Gemini API kľúč nie je nastavený. Prosím, nastavte ho v nastaveniach."))
             return@flow
@@ -91,9 +91,12 @@ class GeminiAgentEngine(
             emit(AgentPipelineStatus.Success(parsedResponse))
 
         } catch (e: Exception) {
-            emit(AgentPipelineStatus.Error("AI Pipeline Error: ${e.localizedMessage}. Falling back to Smart Demo."))
-            // Graceful fallback for smooth user experience
-            emit(runMockPipeline())
+            if (apiKey.isBlank()) {
+                emit(AgentPipelineStatus.Error("AI Pipeline Error: ${e.localizedMessage}. Falling back to Smart Demo."))
+                emit(runMockPipeline())
+            } else {
+                emit(AgentPipelineStatus.Error(e.localizedMessage ?: "Unknown network/AI error"))
+            }
         }
     }.flowOn(Dispatchers.IO)
 

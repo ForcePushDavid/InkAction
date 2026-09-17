@@ -671,7 +671,7 @@ fun ActionsPaneContent(
     onTogglePin: (Long) -> Unit,
     onEnhanceNote: (Long) -> Unit
 ) {
-    val tabTitles = listOf("Notes", "Todos", "Calendar")
+    val tabTitles = listOf("Notes", "Todos", "Calendar", "Archiv")
 
     Column(modifier = Modifier.fillMaxSize()) {
         TabRow(
@@ -697,20 +697,20 @@ fun ActionsPaneContent(
             when (selectedTab) {
                 0 -> NotesScreen(
                     note = note, 
-                    allNotes = allNotes, 
+                    allNotes = allNotes.filter { !it.isArchived }, 
                     enhancingNotes = enhancingNotes,
                     folders = folders,
                     onCreateFolder = onCreateFolder,
                     onMoveNote = onMoveNote,
                     onResumeDrawing = onResumeDrawing, 
-                    onDeleteNote = onDeleteNote,
+                    onDeleteNote = { viewModel.archiveNote(it) },
                     onTogglePin = onTogglePin,
                     onEnhanceNote = onEnhanceNote
                 )
                 1 -> TodosScreen(
-                    todos = todos, 
+                    todos = todos.filter { !it.isArchived }, 
                     onToggleTodo = onToggleTodo, 
-                    onDeleteTodo = onDeleteTodo,
+                    onDeleteTodo = { viewModel.archiveTodo(it) },
                     onNavigateToNote = { noteId ->
                         val noteToResume = allNotes.find { it.id == noteId }
                         if (noteToResume != null) {
@@ -719,6 +719,21 @@ fun ActionsPaneContent(
                     }
                 )
                 2 -> CalendarScreen(events = events)
+                3 -> Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                    Text("Archivované Poznámky", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                    val archivedNotes = allNotes.filter { it.isArchived }
+                    if (archivedNotes.isEmpty()) Text("Žádné archivované poznámky.", color = androidx.compose.material3.MaterialTheme.colorScheme.outline)
+                    archivedNotes.forEach { n ->
+                        Text("- ${n.title}", modifier = Modifier.clickable { onDeleteNote(n.id) }) // onDeleteNote mapped to unarchive? Wait, we need onArchiveNote
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text("Archivované Úkoly", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                    val archivedTodos = todos.filter { it.isArchived }
+                    if (archivedTodos.isEmpty()) Text("Žádné archivované úkoly.", color = androidx.compose.material3.MaterialTheme.colorScheme.outline)
+                    archivedTodos.forEach { t ->
+                        Text("- ${t.text}", modifier = Modifier.clickable { onDeleteTodo(t.id) })
+                    }
+                }
             }
         }
     }

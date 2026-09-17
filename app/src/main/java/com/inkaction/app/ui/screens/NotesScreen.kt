@@ -52,6 +52,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import com.inkaction.app.ai.NoteDto
 import com.inkaction.app.data.SavedNote
 
@@ -242,18 +247,47 @@ fun NotesScreen(
                 }
             }
             
+            val haptics = LocalHapticFeedback.current
             filteredNotes.forEach { savedNote ->
-                SavedNoteCard(
-                    savedNote = savedNote, 
-                    context = context, 
-                    folders = folders,
-                    onMoveNote = { folderId -> onMoveNote(savedNote.id, folderId) },
-                    onResumeDrawing = { onResumeDrawing(savedNote) },
-                    onDeleteNote = { onDeleteNote(savedNote.id) },
-                    onTogglePin = { onTogglePin(savedNote.id) },
-                    onEnhance = { onEnhanceNote(savedNote.id) },
-                    isEnhancing = enhancingNotes[savedNote.id] == true
+                val dismissState = rememberSwipeToDismissBoxState(
+                    confirmValueChange = {
+                        if (it == SwipeToDismissBoxValue.EndToStart || it == SwipeToDismissBoxValue.StartToEnd) {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onDeleteNote(savedNote.id) // mapped to archive
+                            true
+                        } else false
+                    }
                 )
+                SwipeToDismissBox(
+                    state = dismissState,
+                    backgroundContent = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.error, RoundedCornerShape(16.dp))
+                                .padding(horizontal = 20.dp),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Archive", tint = androidx.compose.ui.graphics.Color.White)
+                        }
+                    }
+                ) {
+                    SavedNoteCard(
+                        savedNote = savedNote, 
+                        context = context, 
+                        folders = folders,
+                        onMoveNote = { folderId -> onMoveNote(savedNote.id, folderId) },
+                        onResumeDrawing = { onResumeDrawing(savedNote) },
+                        onDeleteNote = { onDeleteNote(savedNote.id) },
+                        onTogglePin = { 
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onTogglePin(savedNote.id) 
+                        },
+                        onEnhance = { onEnhanceNote(savedNote.id) },
+                        isEnhancing = enhancingNotes[savedNote.id] == true
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }

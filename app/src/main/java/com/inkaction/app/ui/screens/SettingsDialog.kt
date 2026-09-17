@@ -71,8 +71,7 @@ fun SettingsDialog(
     // Výchozí modely, pokud selže stahování nebo klíč není zadán
     val defaultModels = listOf(
         Triple("gemini-3.8-flash", "Gemini 3.8 Flash (Výchozí)", "🚀 Výchozí standardní model"),
-        Triple("gemini-3.8-pro", "Gemini 3.8 Pro", "🧠 Chytřejší, vhodný pro složitější úlohy"),
-        Triple("gemini-2.5-flash", "Gemini 2.5 Flash", "⚡ Starší rychlý model")
+        Triple("gemini-3.5-flash", "Gemini 3.5 Flash", "⚡ Starší rychlý model")
     )
     var activeModels by remember { mutableStateOf(defaultModels) }
     var isFetchingModels by remember { mutableStateOf(false) }

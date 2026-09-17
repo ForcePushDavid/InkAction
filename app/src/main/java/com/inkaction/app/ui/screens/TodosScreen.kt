@@ -37,6 +37,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import com.inkaction.app.data.SavedTodo
 import com.inkaction.app.ui.theme.AccentAmber
 import com.inkaction.app.ui.theme.AccentRed
@@ -75,9 +80,11 @@ fun TodosScreen(
         return
     }
 
+    val haptics = LocalHapticFeedback.current
     val recentlyCompleted = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateListOf<String>() }
-    val activeTodos = todos.filter { !it.isCompleted || recentlyCompleted.contains(it.id) }.sortedByDescending { it.timestamp }
-    val completedTodos = todos.filter { it.isCompleted && !recentlyCompleted.contains(it.id) }.sortedByDescending { it.timestamp }
+    val unarchivedTodos = todos.filter { !it.isArchived }
+    val activeTodos = unarchivedTodos.filter { !it.isCompleted || recentlyCompleted.contains(it.id) }.sortedByDescending { it.timestamp }
+    val completedTodos = unarchivedTodos.filter { it.isCompleted && !recentlyCompleted.contains(it.id) }.sortedByDescending { it.timestamp }
 
     LazyColumn(
         modifier = modifier
@@ -96,20 +103,45 @@ fun TodosScreen(
                 )
             }
             items(activeTodos, key = { it.id.ifBlank { "${it.timestamp}_${it.text.hashCode()}" } }) { todo ->
-                TodoCard(
-                    todo = todo, 
-                    onToggle = { 
-                        val newStatus = !todo.isCompleted
-                        onToggleTodo(todo.id, newStatus)
-                        if (newStatus) {
-                            recentlyCompleted.add(todo.id)
-                        } else {
-                            recentlyCompleted.remove(todo.id)
-                        }
-                    },
-                    onDelete = { onDeleteTodo(todo.id) },
-                    onNavigateToNote = if (todo.noteId != null) { { onNavigateToNote(todo.noteId) } } else null
+                val dismissState = rememberSwipeToDismissBoxState(
+                    confirmValueChange = {
+                        if (it == SwipeToDismissBoxValue.EndToStart || it == SwipeToDismissBoxValue.StartToEnd) {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onDeleteTodo(todo.id) // Map this to archive in ViewModel
+                            true
+                        } else false
+                    }
                 )
+                SwipeToDismissBox(
+                    state = dismissState,
+                    backgroundContent = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.error, RoundedCornerShape(12.dp))
+                                .padding(horizontal = 20.dp),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Archive", tint = androidx.compose.ui.graphics.Color.White)
+                        }
+                    }
+                ) {
+                    TodoCard(
+                        todo = todo, 
+                        onToggle = { 
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            val newStatus = !todo.isCompleted
+                            onToggleTodo(todo.id, newStatus)
+                            if (newStatus) {
+                                recentlyCompleted.add(todo.id)
+                            } else {
+                                recentlyCompleted.remove(todo.id)
+                            }
+                        },
+                        onDelete = { onDeleteTodo(todo.id) },
+                        onNavigateToNote = if (todo.noteId != null) { { onNavigateToNote(todo.noteId) } } else null
+                    )
+                }
             }
         }
 
@@ -125,20 +157,45 @@ fun TodosScreen(
                 )
             }
             items(completedTodos, key = { "${it.id}_completed" }) { todo ->
-                TodoCard(
-                    todo = todo, 
-                    onToggle = { 
-                        val newStatus = !todo.isCompleted
-                        onToggleTodo(todo.id, newStatus)
-                        if (newStatus) {
-                            recentlyCompleted.add(todo.id)
-                        } else {
-                            recentlyCompleted.remove(todo.id)
-                        }
-                    },
-                    onDelete = { onDeleteTodo(todo.id) },
-                    onNavigateToNote = if (todo.noteId != null) { { onNavigateToNote(todo.noteId) } } else null
+                val dismissState = rememberSwipeToDismissBoxState(
+                    confirmValueChange = {
+                        if (it == SwipeToDismissBoxValue.EndToStart || it == SwipeToDismissBoxValue.StartToEnd) {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onDeleteTodo(todo.id)
+                            true
+                        } else false
+                    }
                 )
+                SwipeToDismissBox(
+                    state = dismissState,
+                    backgroundContent = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.error, RoundedCornerShape(12.dp))
+                                .padding(horizontal = 20.dp),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Archive", tint = androidx.compose.ui.graphics.Color.White)
+                        }
+                    }
+                ) {
+                    TodoCard(
+                        todo = todo, 
+                        onToggle = { 
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            val newStatus = !todo.isCompleted
+                            onToggleTodo(todo.id, newStatus)
+                            if (newStatus) {
+                                recentlyCompleted.add(todo.id)
+                            } else {
+                                recentlyCompleted.remove(todo.id)
+                            }
+                        },
+                        onDelete = { onDeleteTodo(todo.id) },
+                        onNavigateToNote = if (todo.noteId != null) { { onNavigateToNote(todo.noteId) } } else null
+                    )
+                }
             }
         }
     }

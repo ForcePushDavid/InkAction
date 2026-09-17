@@ -246,7 +246,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                         val baseTimestamp = System.currentTimeMillis()
                         storageManager.saveTodos(
                             res.todos.mapIndexed { idx, it ->
-                                SavedTodo(
+                                com.inkaction.app.data.SavedTodo(
                                     id = if (it.id.isNotBlank() && it.id.startsWith("todo-")) "${it.id}_${baseTimestamp}_$idx" else java.util.UUID.randomUUID().toString(),
                                     text = it.text,
                                     priority = it.priority,
@@ -259,7 +259,53 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                         )
                     }
                 } else if (status is AgentPipelineStatus.Error) {
-                    _autoPushState.value = AutoPushUiState(isProcessing = false)
+                    if (apiKey.isNotBlank()) {
+                        _autoPushState.value = AutoPushUiState(isProcessing = false)
+                        _pipelineStatus.value = AgentPipelineStatus.Error("Zpracování selhalo: ${status.message}. Úloha přidána do offline fronty a zkusí se znovu později.")
+                        
+                        try {
+                            val context = getApplication<android.app.Application>()
+                            val queueDir = java.io.File(context.filesDir, "offline_queue")
+                            if (!queueDir.exists()) queueDir.mkdirs()
+                            
+                            val taskId = System.currentTimeMillis().toString()
+                            val imagePaths = bitmaps.mapIndexed { index, bitmap ->
+                                val file = java.io.File(queueDir, "img_${taskId}_${index}.png")
+                                val out = java.io.FileOutputStream(file)
+                                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+                                out.flush()
+                                out.close()
+                                file.absolutePath
+                            }.toTypedArray()
+
+                            val workData = androidx.work.Data.Builder()
+                                .putString("api_key", apiKey)
+                                .putString("model_name", modelName)
+                                .putString("language", noteLanguage)
+                                .putString("default_event_time", defaultEventTime)
+                                .putString("existing_todos", existingTodosStr)
+                                .putString("existing_events", existingEventsStr)
+                                .putBoolean("generate_note", generateNote)
+                                .putBoolean("generate_todos", generateTodos)
+                                .putStringArray("image_paths", imagePaths)
+                                .build()
+
+                            val constraints = androidx.work.Constraints.Builder()
+                                .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                                .build()
+
+                            val request = androidx.work.OneTimeWorkRequestBuilder<com.inkaction.app.worker.GeminiOfflineWorker>()
+                                .setConstraints(constraints)
+                                .setInputData(workData)
+                                .build()
+
+                            androidx.work.WorkManager.getInstance(context).enqueue(request)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    } else {
+                        _autoPushState.value = AutoPushUiState(isProcessing = false)
+                    }
                 }
             }
         }
@@ -277,9 +323,21 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun archiveTodo(todoId: String) {
+        viewModelScope.launch {
+            storageManager.archiveTodo(todoId)
+        }
+    }
+
     fun deleteNote(noteId: Long) {
         viewModelScope.launch {
             storageManager.deleteNote(noteId)
+        }
+    }
+
+    fun archiveNote(noteId: Long) {
+        viewModelScope.launch {
+            storageManager.archiveNote(noteId)
         }
     }
 
