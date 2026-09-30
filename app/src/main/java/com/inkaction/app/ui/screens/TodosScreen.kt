@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -119,11 +120,11 @@ fun TodosScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.error, RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp))
                                 .padding(horizontal = 20.dp),
                             contentAlignment = Alignment.CenterEnd
                         ) {
-                            Icon(Icons.Default.Delete, contentDescription = "Archive", tint = androidx.compose.ui.graphics.Color.White)
+                            Icon(Icons.Default.Archive, contentDescription = "Archivovat", tint = MaterialTheme.colorScheme.onSecondaryContainer)
                         }
                     }
                 ) {
@@ -173,11 +174,11 @@ fun TodosScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.error, RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp))
                                 .padding(horizontal = 20.dp),
                             contentAlignment = Alignment.CenterEnd
                         ) {
-                            Icon(Icons.Default.Delete, contentDescription = "Archive", tint = androidx.compose.ui.graphics.Color.White)
+                            Icon(Icons.Default.Archive, contentDescription = "Archivovat", tint = MaterialTheme.colorScheme.onSecondaryContainer)
                         }
                     }
                 ) {

@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -250,29 +251,30 @@ fun NotesScreen(
             
             val haptics = LocalHapticFeedback.current
             filteredNotes.forEach { savedNote ->
-                val dismissState = rememberSwipeToDismissBoxState(
-                    confirmValueChange = {
-                        if (it == SwipeToDismissBoxValue.EndToStart || it == SwipeToDismissBoxValue.StartToEnd) {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onDeleteNote(savedNote.id) // mapped to archive
-                            true
-                        } else false
-                    }
-                )
-                SwipeToDismissBox(
-                    state = dismissState,
-                    backgroundContent = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.error, RoundedCornerShape(16.dp))
-                                .padding(horizontal = 20.dp),
-                            contentAlignment = Alignment.CenterEnd
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = "Archive", tint = androidx.compose.ui.graphics.Color.White)
+                androidx.compose.runtime.key(savedNote.id) {
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = {
+                            if (it == SwipeToDismissBoxValue.EndToStart || it == SwipeToDismissBoxValue.StartToEnd) {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onDeleteNote(savedNote.id) // mapped to archive
+                                true
+                            } else false
                         }
-                    }
-                ) {
+                    )
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        backgroundContent = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(16.dp))
+                                    .padding(horizontal = 20.dp),
+                                contentAlignment = Alignment.CenterEnd
+                            ) {
+                                Icon(Icons.Default.Archive, contentDescription = "Archivovat", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                            }
+                        }
+                    ) {
                     SavedNoteCard(
                         savedNote = savedNote, 
                         context = context, 
@@ -289,6 +291,7 @@ fun NotesScreen(
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
+                }
             }
         }
     }

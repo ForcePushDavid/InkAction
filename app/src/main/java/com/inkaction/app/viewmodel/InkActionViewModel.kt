@@ -325,7 +325,13 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun archiveTodo(todoId: String) {
         viewModelScope.launch {
-            storageManager.archiveTodo(todoId)
+            storageManager.archiveTodo(todoId, true)
+        }
+    }
+
+    fun unarchiveTodo(todoId: String) {
+        viewModelScope.launch {
+            storageManager.archiveTodo(todoId, false)
         }
     }
 
@@ -337,7 +343,13 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun archiveNote(noteId: Long) {
         viewModelScope.launch {
-            storageManager.archiveNote(noteId)
+            storageManager.archiveNote(noteId, true)
+        }
+    }
+
+    fun unarchiveNote(noteId: Long) {
+        viewModelScope.launch {
+            storageManager.archiveNote(noteId, false)
         }
     }
 
