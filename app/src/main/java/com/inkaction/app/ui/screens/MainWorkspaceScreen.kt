@@ -703,14 +703,14 @@ fun ActionsPaneContent(
                     onCreateFolder = onCreateFolder,
                     onMoveNote = onMoveNote,
                     onResumeDrawing = onResumeDrawing, 
-                    onDeleteNote = { viewModel.archiveNote(it) },
+                    onDeleteNote = onDeleteNote,
                     onTogglePin = onTogglePin,
                     onEnhanceNote = onEnhanceNote
                 )
                 1 -> TodosScreen(
                     todos = todos.filter { !it.isArchived }, 
                     onToggleTodo = onToggleTodo, 
-                    onDeleteTodo = { viewModel.archiveTodo(it) },
+                    onDeleteTodo = onDeleteTodo,
                     onNavigateToNote = { noteId ->
                         val noteToResume = allNotes.find { it.id == noteId }
                         if (noteToResume != null) {
