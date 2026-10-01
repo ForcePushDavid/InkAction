@@ -338,7 +338,9 @@ fun MainWorkspaceScreen(
                             },
                             onDeleteNote = { id -> viewModel.archiveNote(id) },
                             onTogglePin = { id -> viewModel.toggleNotePin(id) },
-                            onEnhanceNote = { id -> viewModel.enhanceNote(id) }
+                            onEnhanceNote = { id -> viewModel.enhanceNote(id) },
+                            onUnarchiveNote = { id -> viewModel.unarchiveNote(id) },
+                            onUnarchiveTodo = { id -> viewModel.unarchiveTodo(id) }
                         )
                     }
                 }
@@ -376,7 +378,9 @@ fun MainWorkspaceScreen(
                             },
                             onDeleteNote = { id -> viewModel.archiveNote(id) },
                             onTogglePin = { id -> viewModel.toggleNotePin(id) },
-                            onEnhanceNote = { id -> viewModel.enhanceNote(id) }
+                            onEnhanceNote = { id -> viewModel.enhanceNote(id) },
+                            onUnarchiveNote = { id -> viewModel.unarchiveNote(id) },
+                            onUnarchiveTodo = { id -> viewModel.unarchiveTodo(id) }
                         )
                     }
                 }
@@ -669,7 +673,9 @@ fun ActionsPaneContent(
     onResumeDrawing: (com.inkaction.app.data.SavedNote) -> Unit,
     onDeleteNote: (Long) -> Unit,
     onTogglePin: (Long) -> Unit,
-    onEnhanceNote: (Long) -> Unit
+    onEnhanceNote: (Long) -> Unit,
+    onUnarchiveNote: (Long) -> Unit,
+    onUnarchiveTodo: (String) -> Unit
 ) {
     val tabTitles = listOf("Notes", "Todos", "Calendar", "Archiv")
 
@@ -724,14 +730,14 @@ fun ActionsPaneContent(
                     val archivedNotes = allNotes.filter { it.isArchived }
                     if (archivedNotes.isEmpty()) Text("Žádné archivované poznámky.", color = androidx.compose.material3.MaterialTheme.colorScheme.outline)
                     archivedNotes.forEach { n ->
-                        Text("- ${n.title}", modifier = Modifier.clickable { viewModel.unarchiveNote(n.id) }) 
+                        Text("- ${n.title}", modifier = Modifier.clickable { onUnarchiveNote(n.id) }) 
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                     Text("Archivované Úkoly", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
                     val archivedTodos = todos.filter { it.isArchived }
                     if (archivedTodos.isEmpty()) Text("Žádné archivované úkoly.", color = androidx.compose.material3.MaterialTheme.colorScheme.outline)
                     archivedTodos.forEach { t ->
-                        Text("- ${t.text}", modifier = Modifier.clickable { viewModel.unarchiveTodo(t.id) })
+                        Text("- ${t.text}", modifier = Modifier.clickable { onUnarchiveTodo(t.id) })
                     }
                 }
             }
