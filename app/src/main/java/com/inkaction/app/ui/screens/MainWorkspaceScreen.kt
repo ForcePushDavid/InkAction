@@ -328,7 +328,7 @@ fun MainWorkspaceScreen(
                             onCreateFolder = { name, colorHex -> viewModel.createFolder(name, colorHex) },
                             onMoveNote = { noteId, folderId -> viewModel.moveNoteToFolder(noteId, folderId) },
                             onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) },
-                            onDeleteTodo = { id -> viewModel.deleteTodo(id) },
+                            onDeleteTodo = { id -> viewModel.archiveTodo(id) },
                             onResumeDrawing = { noteToResume -> 
                                 viewModel.loadNoteToCanvas(noteToResume)
                                 viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
@@ -336,7 +336,7 @@ fun MainWorkspaceScreen(
                                 }
                                 phoneNavTab = 0
                             },
-                            onDeleteNote = { id -> viewModel.deleteNote(id) },
+                            onDeleteNote = { id -> viewModel.archiveNote(id) },
                             onTogglePin = { id -> viewModel.toggleNotePin(id) },
                             onEnhanceNote = { id -> viewModel.enhanceNote(id) }
                         )
@@ -366,7 +366,7 @@ fun MainWorkspaceScreen(
                             onCreateFolder = { name, colorHex -> viewModel.createFolder(name, colorHex) },
                             onMoveNote = { noteId, folderId -> viewModel.moveNoteToFolder(noteId, folderId) },
                             onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) },
-                            onDeleteTodo = { id -> viewModel.deleteTodo(id) },
+                            onDeleteTodo = { id -> viewModel.archiveTodo(id) },
                             onResumeDrawing = { noteToResume -> 
                                 viewModel.loadNoteToCanvas(noteToResume)
                                 viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
@@ -374,7 +374,7 @@ fun MainWorkspaceScreen(
                                 }
                                 phoneNavTab = 0
                             },
-                            onDeleteNote = { id -> viewModel.deleteNote(id) },
+                            onDeleteNote = { id -> viewModel.archiveNote(id) },
                             onTogglePin = { id -> viewModel.toggleNotePin(id) },
                             onEnhanceNote = { id -> viewModel.enhanceNote(id) }
                         )
@@ -724,14 +724,14 @@ fun ActionsPaneContent(
                     val archivedNotes = allNotes.filter { it.isArchived }
                     if (archivedNotes.isEmpty()) Text("Žádné archivované poznámky.", color = androidx.compose.material3.MaterialTheme.colorScheme.outline)
                     archivedNotes.forEach { n ->
-                        Text("- ${n.title}", modifier = Modifier.clickable { onDeleteNote(n.id) }) // onDeleteNote mapped to unarchive? Wait, we need onArchiveNote
+                        Text("- ${n.title}", modifier = Modifier.clickable { viewModel.unarchiveNote(n.id) }) 
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                     Text("Archivované Úkoly", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
                     val archivedTodos = todos.filter { it.isArchived }
                     if (archivedTodos.isEmpty()) Text("Žádné archivované úkoly.", color = androidx.compose.material3.MaterialTheme.colorScheme.outline)
                     archivedTodos.forEach { t ->
-                        Text("- ${t.text}", modifier = Modifier.clickable { onDeleteTodo(t.id) })
+                        Text("- ${t.text}", modifier = Modifier.clickable { viewModel.unarchiveTodo(t.id) })
                     }
                 }
             }
