@@ -72,4 +72,14 @@
     <string name="tool_eraser">Gum</string>
     <string name="undo">Ongedaan maken</string>
     <string name="redo">Opnieuw uitvoeren</string>
+
+    <string name="check_for_updates">Controleren op updates</string>
+    <string name="checking_for_updates">Controleren op updates...</string>
+    <string name="update_available_title">Update beschikbaar</string>
+    <string name="no_update_available">Je gebruikt de nieuwste versie.</string>
+    <string name="update_now">Nu bijwerken</string>
+    <string name="downloading_update">Update downloaden (%1$d%%)...</string>
+    <string name="ready_to_install">Download voltooid. Klaar om te installeren.</string>
+    <string name="install">Installeren</string>
+    <string name="download_failed">Downloaden mislukt. Controleer je internetverbinding.</string>
 </resources>

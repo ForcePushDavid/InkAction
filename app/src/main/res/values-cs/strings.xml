@@ -72,4 +72,14 @@
     <string name="tool_eraser">Guma</string>
     <string name="undo">Zpět</string>
     <string name="redo">Znovu</string>
+
+    <string name="check_for_updates">Zkontrolovat aktualizace</string>
+    <string name="checking_for_updates">Kontroluji aktualizace...</string>
+    <string name="update_available_title">Dostupná aktualizace</string>
+    <string name="no_update_available">Používáte nejnovější verzi.</string>
+    <string name="update_now">Aktualizovat nyní</string>
+    <string name="downloading_update">Stahuji aktualizaci (%1$d%%)...</string>
+    <string name="ready_to_install">Stažení dokončeno. Připraveno k instalaci.</string>
+    <string name="install">Nainstalovat</string>
+    <string name="download_failed">Stažení se nezdařilo. Zkontrolujte připojení k internetu.</string>
 </resources>

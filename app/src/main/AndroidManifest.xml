@@ -12,6 +12,9 @@
     <!-- Haptic feedback for S-Pen countdown trigger -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- In-app self-updater -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!-- Stylus / Touch features -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="true" />
     <uses-feature android:name="android.hardware.touchscreen.multitouch" android:required="false" />

@@ -72,4 +72,14 @@
     <string name="tool_eraser">Eraser</string>
     <string name="undo">Undo</string>
     <string name="redo">Redo</string>
+
+    <string name="check_for_updates">Check for updates</string>
+    <string name="checking_for_updates">Checking for updates...</string>
+    <string name="update_available_title">Update available</string>
+    <string name="no_update_available">You have the latest version.</string>
+    <string name="update_now">Update now</string>
+    <string name="downloading_update">Downloading update (%1$d%%)...</string>
+    <string name="ready_to_install">Download complete. Ready to install.</string>
+    <string name="install">Install</string>
+    <string name="download_failed">Download failed. Please check your connection.</string>
 </resources>

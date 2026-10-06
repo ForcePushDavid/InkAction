@@ -34,6 +34,7 @@ import com.inkaction.app.ui.canvas.ToolType
 import com.inkaction.app.ui.notes.NotesScreen
 import com.inkaction.app.ui.settings.LanguageDialog
 import com.inkaction.app.ui.settings.SettingsDialog
+import com.inkaction.app.ui.settings.UpdateDialog
 import com.inkaction.app.ui.todos.TodosScreen
 import com.inkaction.app.viewmodel.InkActionViewModel
 
@@ -46,6 +47,7 @@ fun MainWorkspaceScreen(
     var showSettings by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showArchiveDialog by remember { mutableStateOf(false) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
 
     val calendarPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -121,8 +123,16 @@ fun MainWorkspaceScreen(
             },
             onImportBackup = {
                 importLauncher.launch("application/zip")
-            }
+            },
+            onCheckForUpdates = { showUpdateDialog = true }
         )
+    }
+
+    LaunchedEffect(Unit) {
+        val update = com.inkaction.app.util.UpdateManager.checkForUpdate(com.inkaction.app.BuildConfig.VERSION_NAME)
+        if (update != null) {
+            showUpdateDialog = true
+        }
     }
 
     if (showLanguageDialog) {
@@ -139,6 +149,10 @@ fun MainWorkspaceScreen(
             onDeleteTodoPermanently = { viewModel.deleteTodo(it) },
             onDismiss = { showArchiveDialog = false }
         )
+    }
+
+    if (showUpdateDialog) {
+        UpdateDialog(onDismiss = { showUpdateDialog = false })
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).systemBarsPadding()) {
@@ -279,6 +293,16 @@ fun MainWorkspaceScreen(
                                 onClick = {
                                     showOverflowMenu = false
                                     showSettings = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                leadingIcon = {
+                                    Icon(Icons.Default.SystemUpdate, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                },
+                                text = { Text(stringResource(R.string.check_for_updates)) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showUpdateDialog = true
                                 }
                             )
                         }
