@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">InkAction</string>
+    <string name="tab_canvas">Plátno</string>
+    <string name="tab_notes">Poznámky</string>
+    <string name="tab_todos">Úkoly</string>
+    <string name="tab_calendar">Kalendář</string>
+
+    <string name="save">Uložit</string>
+    <string name="saved">Uloženo</string>
+    <string name="new_note">Nová poznámka</string>
+    <string name="toggle_template">Změnit šablonu</string>
+    <string name="menu">Menu</string>
+
+    <string name="archive_title">Archiv</string>
+    <string name="archive_menu_item">Archiv</string>
+    <string name="archive_empty_notes">Žádné archivované poznámky.</string>
+    <string name="archive_empty_todos">Žádné archivované úkoly.</string>
+    <string name="restore">Obnovit</string>
+    <string name="delete_permanently">Smazat natrvalo</string>
+    <string name="delete_permanently_title">Potvrzení smazání</string>
+    <string name="delete_permanently_note_msg">Opravdu chcete natrvalo smazat poznámku „%1$s“? Tuto akci nelze vrátit zpět.</string>
+    <string name="delete_permanently_todo_msg">Opravdu chcete natrvalo smazat úkol „%1$s“? Tuto akci nelze vrátit zpět.</string>
+
+    <string name="language_menu_item">Jazyk</string>
+    <string name="select_language_title">Jazyk aplikace</string>
+    <string name="lang_system">Podle systému</string>
+    <string name="lang_cs">Čeština</string>
+    <string name="lang_en">English</string>
+    <string name="lang_nl">Nederlands</string>
+
+    <string name="confirm">Potvrdit</string>
+    <string name="cancel">Zrušit</string>
+    <string name="close">Zavřít</string>
+    <string name="untitled_note">Poznámka bez názvu</string>
+
+    <string name="settings_title">Nastavení</string>
+    <string name="api_key_helper">Získejte bezplatný Gemini API klíč na aistudio.google.com</string>
+    <string name="active_gemini_model">Aktivní Gemini Model</string>
+    <string name="note_output_language">Jazyk poznámky</string>
+    <string name="app_theme">Vzhled aplikace</string>
+    <string name="theme_system">Systém</string>
+    <string name="theme_dark">Tmavý</string>
+    <string name="theme_light">Světlý</string>
+    <string name="enable_reminders">Povolit připomínky</string>
+    <string name="enable_reminders_desc">Lokální notifikace pro úkoly a události</string>
+    <string name="default_event_time">Výchozí čas událostí (HH:MM)</string>
+    <string name="backup_restore_title">Záloha a obnova</string>
+    <string name="export_zip">Exportovat (ZIP)</string>
+    <string name="import_zip">Importovat (ZIP)</string>
+    <string name="save_and_apply">Uložit a použít</string>
+
+    <string name="auto_push_status">Stav Auto-Push</string>
+    <string name="auto_push_processing">Zpracovávám AI...</string>
+    <string name="auto_push_waiting">Čekám na pauzu (%1$ds)</string>
+    <string name="auto_push_inactive">Neaktivní (pište)</string>
+
+    <string name="calendar_perm_granted">Přístup ke kalendáři povolen!</string>
+    <string name="calendar_perm_denied">Bez oprávnění nelze automaticky ukládat do kalendáře.</string>
+    <string name="backup_import_success">Záloha importována! Restartujte aplikaci.</string>
+    <string name="backup_import_error">Chyba při importu zálohy.</string>
+    <string name="share_backup_title">Sdílet zálohu (ZIP)</string>
+    <string name="backup_export_error">Chyba při vytváření zálohy.</string>
+
+    <string name="checkbox_note">Poznámka</string>
+    <string name="checkbox_todos">Úkoly</string>
+    <string name="actionize">Actionize</string>
+    <string name="processing">Zpracovávám...</string>
+
+    <string name="tool_pen">Pero</string>
+    <string name="tool_highlighter">Zvýrazňovač</string>
+    <string name="tool_eraser">Guma</string>
+    <string name="undo">Zpět</string>
+    <string name="redo">Znovu</string>
+</resources>

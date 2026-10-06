@@ -6,15 +6,14 @@ plugins {
 
 android {
     namespace = "com.inkaction.app"
-    compileSdk = 36
-    buildToolsVersion = "36.1.0"
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.inkaction.app"
         minSdk = 26
-        targetSdk = 36
-        versionCode = 45
-        versionName = "2.2.13"
+        targetSdk = 34
+        versionCode = 46
+        versionName = "2.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -64,6 +63,7 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)

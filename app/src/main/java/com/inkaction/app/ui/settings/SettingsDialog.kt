@@ -1,4 +1,4 @@
-package com.inkaction.app.ui.screens
+package com.inkaction.app.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
@@ -30,37 +30,33 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.layout.size
-import com.inkaction.app.ui.theme.AccentGreen
+import com.inkaction.app.R
+import com.inkaction.app.ai.GeminiModelCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.URL
-import java.net.HttpURLConnection
-import java.io.InputStreamReader
-import com.google.gson.JsonParser
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsDialog(
     initialApiKey: String,
     initialModel: String,
-    initialDebounceMs: Long,
     initialReminders: Boolean,
     initialLanguage: String,
     initialThemeMode: String,
     initialDefaultEventTime: String,
     onDismiss: () -> Unit,
-    onSave: (apiKey: String, model: String, debounceMs: Long, reminders: Boolean, language: String, themeMode: String, defaultEventTime: String) -> Unit,
+    onSave: (apiKey: String, model: String, reminders: Boolean, language: String, themeMode: String, defaultEventTime: String) -> Unit,
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit
 ) {
     var apiKey by remember { mutableStateOf(initialApiKey) }
-    var model by remember { mutableStateOf(initialModel.ifBlank { "gemini-3.5-flash-lite" }) }
-    var debounceMs by remember { mutableStateOf(initialDebounceMs) }
+    var model by remember { mutableStateOf(initialModel.ifBlank { "gemini-3.8-flash" }) }
     var remindersEnabled by remember { mutableStateOf(initialReminders) }
     var language by remember { mutableStateOf(initialLanguage) }
     var themeMode by remember { mutableStateOf(initialThemeMode) }
@@ -68,10 +64,11 @@ fun SettingsDialog(
     var modelExpanded by remember { mutableStateOf(false) }
     var languageExpanded by remember { mutableStateOf(false) }
 
-    // Výchozí modely, pokud selže stahování nebo klíč není zadán
     val defaultModels = listOf(
-        Triple("gemini-3.8-flash", "Gemini 3.8 Flash (Výchozí)", "🚀 Výchozí standardní model"),
-        Triple("gemini-3.5-flash", "Gemini 3.5 Flash", "⚡ Starší rychlý model")
+        "gemini-3.8-flash",
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gemini-2.0-flash"
     )
     var activeModels by remember { mutableStateOf(defaultModels) }
     var isFetchingModels by remember { mutableStateOf(false) }
@@ -79,37 +76,10 @@ fun SettingsDialog(
     LaunchedEffect(apiKey) {
         if (apiKey.isNotBlank() && apiKey.length > 10) {
             isFetchingModels = true
-            val fetchedModels = withContext(Dispatchers.IO) {
-                try {
-                    val url = URL("https://generativelanguage.googleapis.com/v1beta/models?key=$apiKey")
-                    val conn = url.openConnection() as HttpURLConnection
-                    conn.requestMethod = "GET"
-                    conn.connectTimeout = 5000
-                    conn.readTimeout = 5000
-                    val reader = InputStreamReader(conn.inputStream)
-                    val jsonObject = JsonParser.parseReader(reader).asJsonObject
-                    val modelsArray = jsonObject.getAsJsonArray("models")
-                    
-                    val result = mutableListOf<Triple<String, String, String>>()
-                    for (item in modelsArray) {
-                        val m = item.asJsonObject
-                        val name = m.get("name").asString.removePrefix("models/")
-                        if (!name.startsWith("gemini")) continue
-                        
-                        val methods = m.getAsJsonArray("supportedGenerationMethods")
-                        val supportsGeneration = methods.map { it.asString }.contains("generateContent")
-                        if (!supportsGeneration) continue
-                        
-                        val displayName = if (m.has("displayName")) m.get("displayName").asString else name
-                        val description = if (m.has("description")) m.get("description").asString else ""
-                        result.add(Triple(name, displayName, description))
-                    }
-                    if (result.isNotEmpty()) result else defaultModels
-                } catch (e: Exception) {
-                    defaultModels
-                }
+            val fetched = GeminiModelCatalog.fetchAvailableModels(apiKey)
+            if (fetched.isNotEmpty()) {
+                activeModels = fetched
             }
-            activeModels = fetchedModels
             isFetchingModels = false
         }
     }
@@ -130,7 +100,7 @@ fun SettingsDialog(
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
                 Text(
-                    text = "InkAction Nastavení",
+                    text = stringResource(R.string.settings_title),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -141,6 +111,7 @@ fun SettingsDialog(
                     color = MaterialTheme.colorScheme.outline
                 )
             }
+
             OutlinedTextField(
                 value = apiKey,
                 onValueChange = { apiKey = it },
@@ -150,12 +121,11 @@ fun SettingsDialog(
                 singleLine = true
             )
             Text(
-                text = "Ponechte prázdné pro lokální Smart Demo režim.",
+                text = stringResource(R.string.api_key_helper),
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.outline
             )
 
-            // Dropdown containing strictly active models with quota labels
             ExposedDropdownMenuBox(
                 expanded = modelExpanded,
                 onExpandedChange = { modelExpanded = !modelExpanded }
@@ -163,7 +133,7 @@ fun SettingsDialog(
                 OutlinedTextField(
                     value = model,
                     onValueChange = { model = it },
-                    label = { Text("Aktivní Gemini Model") },
+                    label = { Text(stringResource(R.string.active_gemini_model)) },
                     trailingIcon = { 
                         if (isFetchingModels) {
                             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -179,19 +149,15 @@ fun SettingsDialog(
                     expanded = modelExpanded,
                     onDismissRequest = { modelExpanded = false }
                 ) {
-                    activeModels.forEach { (modelId, name, quota) ->
+                    activeModels.forEach { modelId ->
                         DropdownMenuItem(
                             text = {
-                                Column {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(text = name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground)
-                                        Text(text = modelId, fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                                    }
-                                    Text(text = quota, fontSize = 11.sp, color = if (modelId.contains("lite")) AccentGreen else MaterialTheme.colorScheme.outline)
-                                }
+                                Text(
+                                    text = modelId,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
                             },
                             onClick = {
                                 model = modelId
@@ -202,9 +168,7 @@ fun SettingsDialog(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            val languages = listOf("Auto-detect", "Čeština", "Slovenčina", "English", "Deutsch", "Español", "Français", "Italiano", "Polski", "Русский", "Українська")
+            val languages = listOf("Auto-detect", "English", "Čeština", "Nederlands", "Slovenčina", "Deutsch", "Español", "Français", "Italiano", "Polski")
 
             ExposedDropdownMenuBox(
                 expanded = languageExpanded,
@@ -214,7 +178,7 @@ fun SettingsDialog(
                     value = language,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Jazyk poznámky") },
+                    label = { Text(stringResource(R.string.note_output_language)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = languageExpanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth()
                 )
@@ -234,15 +198,22 @@ fun SettingsDialog(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Theme selection
-            Text(text = "Vzhled aplikace", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(
+                text = stringResource(R.string.app_theme),
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf("system" to "Systém", "dark" to "Tmavý", "light" to "Světlý").forEach { (value, label) ->
+                val modes = listOf(
+                    "system" to stringResource(R.string.theme_system),
+                    "dark" to stringResource(R.string.theme_dark),
+                    "light" to stringResource(R.string.theme_light)
+                )
+                modes.forEach { (value, label) ->
                     Button(
                         onClick = { themeMode = value },
                         modifier = Modifier.weight(1f),
@@ -256,7 +227,6 @@ fun SettingsDialog(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -264,8 +234,17 @@ fun SettingsDialog(
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Povolit připomínky", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text("Lokální notifikace pro úkoly a události", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp)
+                    Text(
+                        stringResource(R.string.enable_reminders),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        stringResource(R.string.enable_reminders_desc),
+                        color = MaterialTheme.colorScheme.outline,
+                        fontSize = 12.sp
+                    )
                 }
                 androidx.compose.material3.Switch(
                     checked = remindersEnabled,
@@ -276,45 +255,57 @@ fun SettingsDialog(
             OutlinedTextField(
                 value = defaultEventTime,
                 onValueChange = { defaultEventTime = it },
-                label = { Text("Výchozí čas událostí (HH:MM)") },
+                label = { Text(stringResource(R.string.default_event_time)) },
                 placeholder = { Text("08:00") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
+
             Text(
-                text = "Tento čas se použije, pokud AI nenajde v textu přesnou hodinu.",
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.outline
+                text = stringResource(R.string.backup_restore_title),
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(text = "Záloha a obnova", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(onClick = onExportBackup, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onBackground)) {
-                    Text("Exportovat (ZIP)", fontSize = 12.sp)
+                Button(
+                    onClick = onExportBackup,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onBackground
+                    )
+                ) {
+                    Text(stringResource(R.string.export_zip), fontSize = 12.sp)
                 }
-                Button(onClick = onImportBackup, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onBackground)) {
-                    Text("Importovat (ZIP)", fontSize = 12.sp)
+                Button(
+                    onClick = onImportBackup,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onBackground
+                    )
+                ) {
+                    Text(stringResource(R.string.import_zip), fontSize = 12.sp)
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
                 TextButton(onClick = onDismiss) {
-                    Text("Zrušit", color = MaterialTheme.colorScheme.outline)
+                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.outline)
                 }
                 Button(
-                    onClick = { onSave(apiKey, model, debounceMs, remindersEnabled, language, themeMode, defaultEventTime) },
+                    onClick = { onSave(apiKey, model, remindersEnabled, language, themeMode, defaultEventTime) },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Uložit a použít")
+                    Text(stringResource(R.string.save_and_apply))
                 }
             }
         }

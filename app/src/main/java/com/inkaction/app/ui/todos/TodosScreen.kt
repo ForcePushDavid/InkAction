@@ -1,5 +1,5 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-package com.inkaction.app.ui.screens
+package com.inkaction.app.ui.todos
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -44,9 +44,9 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
-import com.inkaction.app.data.SavedTodo
-import com.inkaction.app.ui.theme.AccentAmber
-import com.inkaction.app.ui.theme.AccentRed
+import com.inkaction.app.data.model.SavedTodo
+import com.inkaction.app.ui.theme.PriorityHighColor
+import com.inkaction.app.ui.theme.PriorityMediumColor
 
 @Composable
 fun TodosScreen(
@@ -212,9 +212,9 @@ fun TodoCard(
 ) {
     val isDone = todo.isCompleted
     val priorityColor = when (todo.priority.lowercase()) {
-        "high" -> AccentRed
+        "high" -> PriorityHighColor
         "low" -> MaterialTheme.colorScheme.primary
-        else -> AccentAmber
+        else -> PriorityMediumColor
     }
 
     val animatedColor by androidx.compose.animation.animateColorAsState(
@@ -278,14 +278,14 @@ fun TodoCard(
                     Icon(
                         imageVector = Icons.Default.CalendarMonth,
                         contentDescription = null,
-                        tint = if (isDone) MaterialTheme.colorScheme.outline else AccentRed,
+                        tint = if (isDone) MaterialTheme.colorScheme.outline else PriorityHighColor,
                         modifier = Modifier.size(12.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = todo.dueDate,
                         fontSize = 12.sp,
-                        color = if (isDone) MaterialTheme.colorScheme.outline else AccentRed,
+                        color = if (isDone) MaterialTheme.colorScheme.outline else PriorityHighColor,
                         fontWeight = FontWeight.Medium
                     )
                 }

@@ -6,8 +6,8 @@ import android.graphics.Color
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import com.inkaction.app.R
-import com.inkaction.app.data.NoteStorageManager
-import com.inkaction.app.data.SavedTodo
+import com.inkaction.app.InkActionApp
+import com.inkaction.app.data.model.SavedTodo
 
 class TodoWidgetService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {
@@ -27,8 +27,8 @@ class TodoRemoteViewsFactory(private val context: Context) : RemoteViewsService.
     }
 
     private fun loadData() {
-        val manager = NoteStorageManager(context)
-        todos = manager.todosFlow.value.filter { !it.isCompleted }.sortedByDescending { it.timestamp }
+        val app = context.applicationContext as InkActionApp
+        todos = app.noteRepository.todosFlow.value.filter { !it.isCompleted && !it.isArchived }.sortedByDescending { it.timestamp }
     }
 
     override fun onDestroy() {

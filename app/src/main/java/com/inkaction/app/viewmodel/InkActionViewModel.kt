@@ -1,29 +1,32 @@
 package com.inkaction.app.viewmodel
 
 import android.app.Application
-import android.content.Context
 import android.graphics.Bitmap
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.inkaction.app.InkActionApp
 import com.inkaction.app.ai.AgentPipelineStatus
-import com.inkaction.app.ai.AgentResponse
 import com.inkaction.app.ai.EventDto
 import com.inkaction.app.ai.GeminiAgentEngine
 import com.inkaction.app.ai.NoteDto
-import com.inkaction.app.ai.TodoDto
-import com.inkaction.app.data.NoteStorageManager
-import com.inkaction.app.data.SavedNote
-import com.inkaction.app.data.SavedTodo
+import com.inkaction.app.data.model.SavedNote
+import com.inkaction.app.data.model.SavedTodo
+import com.inkaction.app.data.model.NoteFolder
+import com.inkaction.app.ui.canvas.InkStroke
 import com.inkaction.app.ui.canvas.ToolType
+import com.inkaction.app.worker.OfflineQueue
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import java.util.UUID
 
 data class AutoPushUiState(
     val isArmed: Boolean = false,
@@ -32,12 +35,21 @@ data class AutoPushUiState(
     val isProcessing: Boolean = false
 )
 
+sealed class UiEvent {
+    data class ShowSnackbar(val message: String) : UiEvent()
+}
+
 class InkActionViewModel(application: Application) : AndroidViewModel(application) {
+    private val app = application as InkActionApp
+    private val noteRepository = app.noteRepository
+    private val settingsRepository = app.settingsRepository
 
-    private val prefs = application.getSharedPreferences("inkaction_prefs", Context.MODE_PRIVATE)
-    private val storageManager = NoteStorageManager(application)
+    val settings = settingsRepository.settings
 
-    private val geminiEngine = GeminiAgentEngine()
+    private val _uiEvent = Channel<UiEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow()
+
+    private val geminiEngine = GeminiAgentEngine(settings.value.apiKey, settings.value.modelName)
 
     private val _currentTool = MutableStateFlow(ToolType.PEN)
     val currentTool: StateFlow<ToolType> = _currentTool.asStateFlow()
@@ -48,8 +60,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     private val _autoPushState = MutableStateFlow(AutoPushUiState())
     val autoPushState: StateFlow<AutoPushUiState> = _autoPushState.asStateFlow()
 
-    // Persist canvas strokes in ViewModel so they survive tab switches
-    val currentStrokes = mutableListOf<com.inkaction.app.ui.canvas.InkStroke>()
+    val currentStrokes = mutableListOf<InkStroke>()
 
     var currentNoteId: Long? = null
         private set
@@ -57,79 +68,44 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     private val _pipelineStatus = MutableStateFlow<AgentPipelineStatus>(AgentPipelineStatus.Idle)
     val pipelineStatus: StateFlow<AgentPipelineStatus> = _pipelineStatus.asStateFlow()
 
-    val allNotes: StateFlow<List<SavedNote>> = storageManager.notesFlow
-    val foldersFlow: StateFlow<List<com.inkaction.app.data.NoteFolder>> = storageManager.foldersFlow
+    val allNotes: StateFlow<List<SavedNote>> = noteRepository.notesFlow
+    val foldersFlow: StateFlow<List<NoteFolder>> = noteRepository.foldersFlow
 
     private val _currentNote = MutableStateFlow<NoteDto?>(null)
     val currentNote: StateFlow<NoteDto?> = _currentNote.asStateFlow()
 
-    val allTodos: StateFlow<List<SavedTodo>> = storageManager.todosFlow
+    val allTodos: StateFlow<List<SavedTodo>> = noteRepository.todosFlow
 
     private val _events = MutableStateFlow<List<EventDto>>(emptyList())
     val events: StateFlow<List<EventDto>> = _events.asStateFlow()
 
     private var countdownJob: Job? = null
-    var debounceDurationMs: Long = 600000L // Default 10 minutes
-        private set
-    var remindersEnabled: Boolean = false
-        private set
-    var noteLanguage: String = "Auto-detect"
-        private set
-
-    var apiKey: String = ""
-        private set
-    var modelName: String = "gemini-3.8-flash"
-        private set
-    var themeMode by mutableStateOf("system") // "system", "dark", "light"
-        private set
-    var defaultEventTime: String = "08:00"
-        private set
+    private var autoSaveJob: Job? = null
 
     var canvasTemplate by mutableStateOf(0)
         private set
+
+    init {
+        viewModelScope.launch {
+            settings.collect { currentSettings ->
+                geminiEngine.updateConfig(currentSettings.apiKey, currentSettings.modelName)
+            }
+        }
+    }
 
     fun toggleTemplate() {
         canvasTemplate = (canvasTemplate + 1) % 4
     }
 
-    init {
-        loadSettings()
-    }
-
-    private fun loadSettings() {
-        apiKey = prefs.getString("api_key", "") ?: ""
-        modelName = prefs.getString("model_name", "gemini-3.8-flash") ?: "gemini-3.8-flash"
-        remindersEnabled = prefs.getBoolean("reminders_enabled", false)
-        noteLanguage = prefs.getString("note_language", "Auto-detect") ?: "Auto-detect"
-        themeMode = prefs.getString("theme_mode", "system") ?: "system"
-        defaultEventTime = prefs.getString("default_event_time", "08:00") ?: "08:00"
-        // Natvrdo nastavíme 10 minut, aby se přepsaly případné starší uložené hodnoty
-        debounceDurationMs = 600000L 
-        prefs.edit().putLong("debounce_ms", 600000L).apply()
-        
-        geminiEngine.updateConfig(apiKey, modelName)
-    }
-
-    fun saveSettings(newKey: String, newModel: String, newDebounce: Long, reminders: Boolean, language: String, newThemeMode: String, newDefaultEventTime: String) {
-        apiKey = newKey
-        modelName = newModel
-        debounceDurationMs = 600000L // Keep hardcoded 10 mins
-        remindersEnabled = reminders
-        noteLanguage = language
-        themeMode = newThemeMode
-        defaultEventTime = newDefaultEventTime
-
-        prefs.edit()
-            .putString("api_key", newKey)
-            .putString("model_name", newModel)
-            .putLong("debounce_ms", 600000L)
-            .putBoolean("reminders_enabled", reminders)
-            .putString("note_language", language)
-            .putString("theme_mode", newThemeMode)
-            .putString("default_event_time", newDefaultEventTime)
-            .apply()
-
-        geminiEngine.updateConfig(newKey, newModel)
+    fun saveSettings(
+        apiKey: String,
+        modelName: String,
+        remindersEnabled: Boolean,
+        noteLanguage: String,
+        themeMode: String,
+        defaultEventTime: String
+    ) {
+        settingsRepository.saveSettings(apiKey, modelName, remindersEnabled, noteLanguage, themeMode, defaultEventTime)
     }
 
     fun setTool(tool: ToolType) {
@@ -144,10 +120,8 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         cancelCountdown()
     }
 
-    private var autoSaveJob: Job? = null
-
     fun onStrokeFinished(strokeCount: Int, getOcrBitmaps: () -> List<Bitmap>) {
-        if (strokeCount <= 0 || debounceDurationMs <= 0 || _autoPushState.value.isProcessing) {
+        if (strokeCount <= 0 || settings.value.debounceDurationMs <= 0 || _autoPushState.value.isProcessing) {
             cancelCountdown()
             return
         }
@@ -165,17 +139,19 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         cancelCountdown()
         countdownJob = viewModelScope.launch {
             val totalSteps = 60
-            val stepDelay = (debounceDurationMs / totalSteps).coerceAtLeast(50)
+            val debounceMs = settings.value.debounceDurationMs
+            val stepDelay = (debounceMs / totalSteps).coerceAtLeast(50)
+            
             _autoPushState.value = AutoPushUiState(
                 isArmed = true,
                 progress = 0f,
-                remainingSeconds = (debounceDurationMs / 1000).toInt()
+                remainingSeconds = (debounceMs / 1000).toInt()
             )
 
             for (i in 1..totalSteps) {
                 delay(stepDelay)
                 val progress = i.toFloat() / totalSteps.toFloat()
-                val remainingMs = debounceDurationMs - (i * stepDelay)
+                val remainingMs = debounceMs - (i * stepDelay)
                 val remainingSec = (remainingMs / 1000).toInt().coerceAtLeast(0)
 
                 _autoPushState.value = AutoPushUiState(
@@ -185,127 +161,101 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                 )
             }
 
-            // Trigger AI Pipeline
             triggerActionize(getOcrBitmaps())
         }
     }
 
-    fun triggerActionize(bitmaps: List<Bitmap>, strokes: List<com.inkaction.app.ui.canvas.InkStroke> = emptyList(), generateNote: Boolean = true, generateTodos: Boolean = true) {
+    fun triggerActionize(bitmaps: List<Bitmap>, strokes: List<InkStroke> = emptyList(), generateNote: Boolean = true, generateTodos: Boolean = true) {
         cancelCountdown()
         if (bitmaps.isEmpty()) return
 
         _autoPushState.value = AutoPushUiState(isProcessing = true)
 
+        val currentSettings = settings.value
         val existingTodosStr = allTodos.value.filter { !it.isCompleted }.joinToString(", ") { it.text }
         val existingEventsStr = events.value.joinToString(", ") { "${it.title} on ${it.date}" }
 
         viewModelScope.launch {
-            geminiEngine.processInkBitmap(bitmaps, noteLanguage, existingTodosStr, existingEventsStr, generateNote, generateTodos, defaultEventTime).collect { status ->
+            geminiEngine.processInkBitmap(bitmaps, currentSettings.noteLanguage, existingTodosStr, existingEventsStr, generateNote, generateTodos, currentSettings.defaultEventTime).collect { status ->
                 _pipelineStatus.value = status
 
-                if (status is AgentPipelineStatus.Success) {
-                    val res = status.response
-                    
-                    if (generateNote) {
-                        _currentNote.value = res.note
-                    }
-                    
-                    _events.value = res.events
-                    _autoPushState.value = AutoPushUiState(isProcessing = false)
-
-                    if (res.events.isNotEmpty()) {
-                        res.events.forEach { event ->
-                            com.inkaction.app.util.CalendarSyncUtil.addEventToCalendar(getApplication(), event)
-                        }
-                    }
-                    
-                    // Persist to local storage
-                    if (generateNote) {
-                        res.note?.let { note ->
-                            if (currentNoteId != null) {
-                                storageManager.updateNote(
-                                    noteId = currentNoteId!!,
-                                    title = note.title,
-                                    summary = note.summary,
-                                    markdown = note.markdown,
-                                    tags = note.tags,
-                                    strokes = strokes
-                                )
-                            } else {
-                                currentNoteId = storageManager.saveNote(
-                                    title = note.title,
-                                    summary = note.summary,
-                                    markdown = note.markdown,
-                                    tags = note.tags,
-                                    strokes = strokes
-                                )
-                            }
-                        }
-                    }
-                    if (generateTodos && res.todos.isNotEmpty()) {
-                        val baseTimestamp = System.currentTimeMillis()
-                        storageManager.saveTodos(
-                            res.todos.mapIndexed { idx, it ->
-                                com.inkaction.app.data.SavedTodo(
-                                    id = if (it.id.isNotBlank() && it.id.startsWith("todo-")) "${it.id}_${baseTimestamp}_$idx" else java.util.UUID.randomUUID().toString(),
-                                    text = it.text,
-                                    priority = it.priority,
-                                    dueDate = it.dueDate,
-                                    isCompleted = it.completed,
-                                    timestamp = baseTimestamp + idx,
-                                    noteId = currentNoteId
-                                )
-                            }
-                        )
-                    }
-                } else if (status is AgentPipelineStatus.Error) {
-                    if (apiKey.isNotBlank()) {
-                        _autoPushState.value = AutoPushUiState(isProcessing = false)
-                        _pipelineStatus.value = AgentPipelineStatus.Error("Zpracování selhalo: ${status.message}. Úloha přidána do offline fronty a zkusí se znovu později.")
+                when (status) {
+                    is AgentPipelineStatus.Success -> {
+                        val res = status.response
                         
-                        try {
-                            val context = getApplication<android.app.Application>()
-                            val queueDir = java.io.File(context.filesDir, "offline_queue")
-                            if (!queueDir.exists()) queueDir.mkdirs()
-                            
-                            val taskId = System.currentTimeMillis().toString()
-                            val imagePaths = bitmaps.mapIndexed { index, bitmap ->
-                                val file = java.io.File(queueDir, "img_${taskId}_${index}.png")
-                                val out = java.io.FileOutputStream(file)
-                                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
-                                out.flush()
-                                out.close()
-                                file.absolutePath
-                            }.toTypedArray()
-
-                            val workData = androidx.work.Data.Builder()
-                                .putString("api_key", apiKey)
-                                .putString("model_name", modelName)
-                                .putString("language", noteLanguage)
-                                .putString("default_event_time", defaultEventTime)
-                                .putString("existing_todos", existingTodosStr)
-                                .putString("existing_events", existingEventsStr)
-                                .putBoolean("generate_note", generateNote)
-                                .putBoolean("generate_todos", generateTodos)
-                                .putStringArray("image_paths", imagePaths)
-                                .build()
-
-                            val constraints = androidx.work.Constraints.Builder()
-                                .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
-                                .build()
-
-                            val request = androidx.work.OneTimeWorkRequestBuilder<com.inkaction.app.worker.GeminiOfflineWorker>()
-                                .setConstraints(constraints)
-                                .setInputData(workData)
-                                .build()
-
-                            androidx.work.WorkManager.getInstance(context).enqueue(request)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
+                        if (generateNote) {
+                            _currentNote.value = res.note
                         }
-                    } else {
+                        
+                        _events.value = res.events
                         _autoPushState.value = AutoPushUiState(isProcessing = false)
+
+                        if (res.events.isNotEmpty()) {
+                            res.events.forEach { event ->
+                                com.inkaction.app.util.CalendarSyncUtil.addEventToCalendar(getApplication(), event)
+                            }
+                        }
+                        
+                        if (generateNote) {
+                            res.note?.let { note ->
+                                if (currentNoteId != null) {
+                                    noteRepository.updateNote(
+                                        noteId = currentNoteId!!,
+                                        title = note.title,
+                                        summary = note.summary,
+                                        markdown = note.markdown,
+                                        tags = note.tags,
+                                        strokes = strokes
+                                    )
+                                } else {
+                                    currentNoteId = noteRepository.saveNote(
+                                        title = note.title,
+                                        summary = note.summary,
+                                        markdown = note.markdown,
+                                        tags = note.tags,
+                                        strokes = strokes
+                                    )
+                                }
+                            }
+                        }
+                        if (generateTodos && res.todos.isNotEmpty()) {
+                            val baseTimestamp = System.currentTimeMillis()
+                            noteRepository.saveTodos(
+                                res.todos.mapIndexed { idx, it ->
+                                    SavedTodo(
+                                        id = if (it.id.isNotBlank() && it.id.startsWith("todo-")) "${it.id}_${baseTimestamp}_$idx" else UUID.randomUUID().toString(),
+                                        text = it.text,
+                                        priority = it.priority,
+                                        dueDate = it.dueDate,
+                                        isCompleted = it.completed,
+                                        timestamp = baseTimestamp + idx,
+                                        noteId = currentNoteId
+                                    )
+                                }
+                            )
+                        }
                     }
+                    is AgentPipelineStatus.Error -> {
+                        _autoPushState.value = AutoPushUiState(isProcessing = false)
+                        if (currentSettings.apiKey.isNotBlank()) {
+                            _uiEvent.send(UiEvent.ShowSnackbar(status.message))
+                            OfflineQueue.enqueue(
+                                context = getApplication(),
+                                bitmaps = bitmaps,
+                                apiKey = currentSettings.apiKey,
+                                modelName = currentSettings.modelName,
+                                noteLanguage = currentSettings.noteLanguage,
+                                defaultEventTime = currentSettings.defaultEventTime,
+                                existingTodosStr = existingTodosStr,
+                                existingEventsStr = existingEventsStr,
+                                generateNote = generateNote,
+                                generateTodos = generateTodos
+                            )
+                        } else {
+                            _uiEvent.send(UiEvent.ShowSnackbar("Missing API Key. Please update in settings."))
+                        }
+                    }
+                    else -> {}
                 }
             }
         }
@@ -313,61 +263,65 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun toggleTodo(todoId: String, newStatus: Boolean) {
         viewModelScope.launch {
-            storageManager.updateTodoCompletion(todoId, newStatus)
+            noteRepository.updateTodoCompletion(todoId, newStatus)
         }
     }
 
     fun deleteTodo(todoId: String) {
         viewModelScope.launch {
-            storageManager.deleteTodo(todoId)
+            noteRepository.deleteTodo(todoId)
         }
     }
 
     fun archiveTodo(todoId: String) {
         viewModelScope.launch {
-            storageManager.archiveTodo(todoId, true)
+            noteRepository.archiveTodo(todoId, true)
+            _uiEvent.send(UiEvent.ShowSnackbar("Todo archived"))
         }
     }
 
     fun unarchiveTodo(todoId: String) {
         viewModelScope.launch {
-            storageManager.archiveTodo(todoId, false)
+            noteRepository.archiveTodo(todoId, false)
+            _uiEvent.send(UiEvent.ShowSnackbar("Todo unarchived"))
         }
     }
 
-    fun deleteNote(noteId: Long) {
+    fun deleteNotePermanently(noteId: Long) {
         viewModelScope.launch {
-            storageManager.deleteNote(noteId)
+            noteRepository.deleteNotePermanently(noteId)
         }
     }
 
     fun archiveNote(noteId: Long) {
         viewModelScope.launch {
-            storageManager.archiveNote(noteId, true)
+            noteRepository.archiveNote(noteId, true)
+            _uiEvent.send(UiEvent.ShowSnackbar("Note archived"))
         }
     }
 
     fun unarchiveNote(noteId: Long) {
         viewModelScope.launch {
-            storageManager.archiveNote(noteId, false)
+            noteRepository.archiveNote(noteId, false)
+            _uiEvent.send(UiEvent.ShowSnackbar("Note unarchived"))
         }
     }
 
     fun toggleNotePin(noteId: Long) {
         viewModelScope.launch {
-            storageManager.toggleNotePin(noteId)
+            noteRepository.toggleNotePin(noteId)
         }
     }
 
     fun createFolder(name: String, colorHex: String = "#38BDF8") {
         viewModelScope.launch {
-            storageManager.createFolder(name, colorHex)
+            noteRepository.createFolder(name, colorHex)
         }
     }
 
     fun moveNoteToFolder(noteId: Long, folderId: Long?) {
         viewModelScope.launch {
-            storageManager.updateNoteFolder(noteId, folderId)
+            noteRepository.updateNoteFolder(noteId, folderId)
         }
     }
 
@@ -379,9 +333,11 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
             _enhancingNotes.value = _enhancingNotes.value.toMutableMap().apply { put(noteId, true) }
             val note = allNotes.value.find { it.id == noteId }
             if (note != null) {
-                val enhancedText = geminiEngine.enhanceNoteContent(note.summary, note.markdown, noteLanguage)
+                val enhancedText = geminiEngine.enhanceNoteContent(note.summary, note.markdown, settings.value.noteLanguage)
                 if (enhancedText != null) {
-                    storageManager.updateNoteEnhancement(noteId, enhancedText)
+                    noteRepository.updateNoteEnhancement(noteId, enhancedText)
+                } else {
+                    _uiEvent.send(UiEvent.ShowSnackbar("Failed to enhance note"))
                 }
             }
             _enhancingNotes.value = _enhancingNotes.value.toMutableMap().apply { remove(noteId) }
@@ -406,9 +362,9 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         _currentNote.value = null
     }
 
-    fun loadStrokesForNote(noteId: Long, onLoaded: (List<com.inkaction.app.ui.canvas.InkStroke>) -> Unit) {
+    fun loadStrokesForNote(noteId: Long, onLoaded: (List<InkStroke>) -> Unit) {
         viewModelScope.launch {
-            val strokes = storageManager.loadStrokes(noteId)
+            val strokes = noteRepository.loadStrokes(noteId)
             currentStrokes.clear()
             currentStrokes.addAll(strokes)
             onLoaded(strokes)
@@ -418,7 +374,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     fun saveCurrentNoteManually() {
         viewModelScope.launch {
             if (currentNoteId != null) {
-                storageManager.updateNote(
+                noteRepository.updateNote(
                     noteId = currentNoteId!!,
                     title = _currentNote.value?.title ?: "Draft",
                     summary = _currentNote.value?.summary ?: "",
@@ -427,7 +383,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                     strokes = currentStrokes.toList()
                 )
             } else {
-                currentNoteId = storageManager.saveNote(
+                currentNoteId = noteRepository.saveNote(
                     title = "Draft Note",
                     summary = "Manually saved without AI.",
                     markdown = "",

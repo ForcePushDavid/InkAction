@@ -1,18 +1,21 @@
 package com.inkaction.app
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import com.inkaction.app.ui.screens.MainWorkspaceScreen
-import com.inkaction.app.ui.theme.BgDark
+import com.inkaction.app.ui.workspace.MainWorkspaceScreen
 import com.inkaction.app.ui.theme.InkActionTheme
 import com.inkaction.app.viewmodel.InkActionViewModel
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
 
     private val viewModel: InkActionViewModel by viewModels()
 
@@ -20,9 +23,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         setContent {
-            val themeMode = viewModel.themeMode
-            val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
-            val isDarkTheme = when (themeMode) {
+            val settings by viewModel.settings.collectAsState()
+            val isSystemDark = isSystemInDarkTheme()
+            val isDarkTheme = when (settings.themeMode) {
                 "light" -> false
                 "dark" -> true
                 else -> isSystemDark
@@ -31,7 +34,7 @@ class MainActivity : ComponentActivity() {
             InkActionTheme(isDarkTheme = isDarkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.background
+                    color = MaterialTheme.colorScheme.background
                 ) {
                     MainWorkspaceScreen(viewModel = viewModel)
                 }

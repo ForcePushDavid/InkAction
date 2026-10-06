@@ -1,5 +1,5 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-package com.inkaction.app.ui.screens
+package com.inkaction.app.ui.notes
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -60,8 +60,8 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import com.inkaction.app.ai.NoteDto
-import com.inkaction.app.data.SavedNote
-
+import com.inkaction.app.data.model.SavedNote
+import com.inkaction.app.data.model.NoteFolder
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -69,7 +69,7 @@ fun NotesScreen(
     note: NoteDto?,
     allNotes: List<SavedNote>,
     enhancingNotes: Map<Long, Boolean> = emptyMap(),
-    folders: List<com.inkaction.app.data.NoteFolder>,
+    folders: List<NoteFolder>,
     onCreateFolder: (String, String) -> Unit,
     onMoveNote: (Long, Long?) -> Unit,
     onResumeDrawing: (SavedNote) -> Unit,
@@ -427,7 +427,7 @@ fun NoteCard(note: NoteDto, context: Context) {
 fun SavedNoteCard(
     savedNote: SavedNote, 
     context: Context, 
-    folders: List<com.inkaction.app.data.NoteFolder>,
+    folders: List<NoteFolder>,
     onMoveNote: (Long?) -> Unit,
     onResumeDrawing: () -> Unit, 
     onDeleteNote: () -> Unit,

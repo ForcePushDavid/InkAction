@@ -4,10 +4,12 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.inkaction.app.InkActionApp
 import com.inkaction.app.ai.GeminiAgentEngine
-import com.inkaction.app.data.NoteStorageManager
 import com.inkaction.app.ai.AgentPipelineStatus
+import com.inkaction.app.data.model.SavedTodo
 import java.io.File
+import java.util.UUID
 
 class GeminiOfflineWorker(
     private val context: Context,
@@ -27,8 +29,9 @@ class GeminiOfflineWorker(
         
         if (apiKey.isBlank()) return Result.failure()
 
+        val app = context.applicationContext as InkActionApp
+        val noteRepository = app.noteRepository
         val engine = GeminiAgentEngine(apiKey, modelName)
-        val storageManager = NoteStorageManager(context)
 
         val bitmaps = imagePaths.mapNotNull { path ->
             val file = File(path)
@@ -59,7 +62,7 @@ class GeminiOfflineWorker(
                 
                 var noteId: Long? = null
                 if (generateNote && res.note != null) {
-                    noteId = storageManager.saveNote(
+                    noteId = noteRepository.saveNote(
                         title = res.note.title,
                         summary = res.note.summary,
                         markdown = res.note.markdown,
@@ -70,10 +73,10 @@ class GeminiOfflineWorker(
 
                 if (generateTodos && res.todos.isNotEmpty()) {
                     val baseTimestamp = System.currentTimeMillis()
-                    storageManager.saveTodos(
+                    noteRepository.saveTodos(
                         res.todos.mapIndexed { idx, it ->
-                            com.inkaction.app.data.SavedTodo(
-                                id = java.util.UUID.randomUUID().toString(),
+                            SavedTodo(
+                                id = UUID.randomUUID().toString(),
                                 text = it.text,
                                 priority = it.priority,
                                 dueDate = it.dueDate,

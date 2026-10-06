@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">InkAction</string>
+    <string name="tab_canvas">Canvas</string>
+    <string name="tab_notes">Notities</string>
+    <string name="tab_todos">Taken</string>
+    <string name="tab_calendar">Agenda</string>
+
+    <string name="save">Opslaan</string>
+    <string name="saved">Opgeslagen</string>
+    <string name="new_note">Nieuwe notitie</string>
+    <string name="toggle_template">Sjabloon wijzigen</string>
+    <string name="menu">Menu</string>
+
+    <string name="archive_title">Archief</string>
+    <string name="archive_menu_item">Archief</string>
+    <string name="archive_empty_notes">Geen gearchiveerde notities.</string>
+    <string name="archive_empty_todos">Geen gearchiveerde taken.</string>
+    <string name="restore">Herstellen</string>
+    <string name="delete_permanently">Definitief verwijderen</string>
+    <string name="delete_permanently_title">Verwijdering bevestigen</string>
+    <string name="delete_permanently_note_msg">Weet je zeker dat je notitie \"%1$s\" definitief wilt verwijderen? Dit kan niet ongedaan worden gemaakt.</string>
+    <string name="delete_permanently_todo_msg">Weet je zeker dat je taak \"%1$s\" definitief wilt verwijderen? Dit kan niet ongedaan worden gemaakt.</string>
+
+    <string name="language_menu_item">Taal</string>
+    <string name="select_language_title">App-taal</string>
+    <string name="lang_system">Systeemstandaard</string>
+    <string name="lang_cs">Čeština</string>
+    <string name="lang_en">English</string>
+    <string name="lang_nl">Nederlands</string>
+
+    <string name="confirm">Bevestigen</string>
+    <string name="cancel">Annuleren</string>
+    <string name="close">Sluiten</string>
+    <string name="untitled_note">Naamloze notitie</string>
+
+    <string name="settings_title">Instellingen</string>
+    <string name="api_key_helper">Haal je Gemini API-sleutel op via aistudio.google.com</string>
+    <string name="active_gemini_model">Actief Gemini-model</string>
+    <string name="note_output_language">Notitietaal</string>
+    <string name="app_theme">App-thema</string>
+    <string name="theme_system">Systeem</string>
+    <string name="theme_dark">Donker</string>
+    <string name="theme_light">Licht</string>
+    <string name="enable_reminders">Herinneringen inschakelen</string>
+    <string name="enable_reminders_desc">Lokale meldingen voor taken en agenda</string>
+    <string name="default_event_time">Standaard tijd (UU:MM)</string>
+    <string name="backup_restore_title">Back-up &amp; herstel</string>
+    <string name="export_zip">Exporteren (ZIP)</string>
+    <string name="import_zip">Importeren (ZIP)</string>
+    <string name="save_and_apply">Opslaan en toepassen</string>
+
+    <string name="auto_push_status">Auto-Push-status</string>
+    <string name="auto_push_processing">Verwerken met AI...</string>
+    <string name="auto_push_waiting">Wachten op pauze (%1$ds)</string>
+    <string name="auto_push_inactive">Inactief (blijf schrijven)</string>
+
+    <string name="calendar_perm_granted">Agendatoegang verleend!</string>
+    <string name="calendar_perm_denied">Agendamachtiging geweigerd. Kan niet synchroniseren.</string>
+    <string name="backup_import_success">Back-up geïmporteerd! Start de app opnieuw op.</string>
+    <string name="backup_import_error">Fout bij importeren van back-up.</string>
+    <string name="share_backup_title">Back-up delen (ZIP)</string>
+    <string name="backup_export_error">Fout bij maken van back-up.</string>
+
+    <string name="checkbox_note">Notitie</string>
+    <string name="checkbox_todos">Taken</string>
+    <string name="actionize">Actionize</string>
+    <string name="processing">Verwerken...</string>
+
+    <string name="tool_pen">Pen</string>
+    <string name="tool_highlighter">Markeerstift</string>
+    <string name="tool_eraser">Gum</string>
+    <string name="undo">Ongedaan maken</string>
+    <string name="redo">Opnieuw uitvoeren</string>
+</resources>

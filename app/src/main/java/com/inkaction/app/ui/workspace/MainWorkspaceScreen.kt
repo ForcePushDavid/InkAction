@@ -1,75 +1,40 @@
-package com.inkaction.app.ui.screens
+package com.inkaction.app.ui.workspace
 
 import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Brush
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Redo
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Undo
-import androidx.compose.material.icons.filled.GridOn
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.inkaction.app.R
+import com.inkaction.app.data.model.SavedNote
+import com.inkaction.app.data.model.SavedTodo
+import com.inkaction.app.data.model.NoteFolder
+import com.inkaction.app.ui.archive.ArchiveDialog
+import com.inkaction.app.ui.calendar.CalendarScreen
 import com.inkaction.app.ui.canvas.InkCanvasView
 import com.inkaction.app.ui.canvas.ToolType
-import com.inkaction.app.ui.components.AutoPushCountdownPill
-import androidx.compose.material3.MaterialTheme
+import com.inkaction.app.ui.notes.NotesScreen
+import com.inkaction.app.ui.settings.LanguageDialog
+import com.inkaction.app.ui.settings.SettingsDialog
+import com.inkaction.app.ui.todos.TodosScreen
 import com.inkaction.app.viewmodel.InkActionViewModel
 
 @Composable
@@ -79,26 +44,17 @@ fun MainWorkspaceScreen(
 ) {
     var inkCanvasRef by remember { mutableStateOf<InkCanvasView?>(null) }
     var showSettings by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    var showArchiveDialog by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
-    
-    val backupImportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
-    ) { uri ->
-        if (uri != null) {
-            val success = com.inkaction.app.util.BackupUtil.importFromZip(context, uri, context.filesDir)
-            if (success) {
-                android.widget.Toast.makeText(context, "Záloha obnovena. Restartujte aplikaci.", android.widget.Toast.LENGTH_LONG).show()
-            }
-        }
-    }
 
     val calendarPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            android.widget.Toast.makeText(context, "Přístup ke kalendáři povolen!", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(context, context.getString(R.string.calendar_perm_granted), android.widget.Toast.LENGTH_SHORT).show()
         } else {
-            android.widget.Toast.makeText(context, "Bez oprávnění nelze automaticky ukládat do kalendáře.", android.widget.Toast.LENGTH_LONG).show()
+            android.widget.Toast.makeText(context, context.getString(R.string.calendar_perm_denied), android.widget.Toast.LENGTH_LONG).show()
         }
     }
 
@@ -111,6 +67,7 @@ fun MainWorkspaceScreen(
     val autoPushState by viewModel.autoPushState.collectAsState()
     val currentTool by viewModel.currentTool.collectAsState()
     val currentColor by viewModel.currentColor.collectAsState()
+    val appSettings by viewModel.settings.collectAsState()
 
     val currentNote by viewModel.currentNote.collectAsState()
     val allNotes by viewModel.allNotes.collectAsState()
@@ -119,35 +76,34 @@ fun MainWorkspaceScreen(
     val events by viewModel.events.collectAsState()
     val folders by viewModel.foldersFlow.collectAsState()
 
-    var selectedActionTab by remember { mutableIntStateOf(0) }
-    var phoneNavTab by remember { mutableIntStateOf(0) } // 0 = Canvas, 1 = Actions
+    // 0 = Canvas, 1 = Notes, 2 = Todos, 3 = Calendar
+    var phoneNavTab by remember { mutableIntStateOf(0) }
+    var tabletActionTab by remember { mutableIntStateOf(0) }
 
-    
     val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
             val success = com.inkaction.app.util.BackupUtil.importFromZip(context, uri, context.filesDir)
             if (success) {
-                android.widget.Toast.makeText(context, "Záloha importována! Restartujte aplikaci.", android.widget.Toast.LENGTH_LONG).show()
+                android.widget.Toast.makeText(context, context.getString(R.string.backup_import_success), android.widget.Toast.LENGTH_LONG).show()
             } else {
-                android.widget.Toast.makeText(context, "Chyba při importu.", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, context.getString(R.string.backup_import_error), android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     if (showSettings) {
         SettingsDialog(
-            initialApiKey = viewModel.apiKey,
-            initialModel = viewModel.modelName,
-            initialDebounceMs = viewModel.debounceDurationMs,
-            initialReminders = viewModel.remindersEnabled,
-            initialLanguage = viewModel.noteLanguage,
-            initialThemeMode = viewModel.themeMode,
-            initialDefaultEventTime = viewModel.defaultEventTime,
+            initialApiKey = appSettings.apiKey,
+            initialModel = appSettings.modelName,
+            initialReminders = appSettings.remindersEnabled,
+            initialLanguage = appSettings.noteLanguage,
+            initialThemeMode = appSettings.themeMode,
+            initialDefaultEventTime = appSettings.defaultEventTime,
             onDismiss = { showSettings = false },
-            onSave = { key, model, debounce, reminders, language, themeMode, defaultTime ->
-                viewModel.saveSettings(key, model, debounce, reminders, language, themeMode, defaultTime)
+            onSave = { key, model, reminders, language, themeMode, defaultTime ->
+                viewModel.saveSettings(key, model, reminders, language, themeMode, defaultTime)
                 showSettings = false
             },
             onExportBackup = {
@@ -158,9 +114,9 @@ fun MainWorkspaceScreen(
                         putExtra(android.content.Intent.EXTRA_STREAM, uri)
                         addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
-                    context.startActivity(android.content.Intent.createChooser(intent, "Sdílet zálohu (ZIP)"))
+                    context.startActivity(android.content.Intent.createChooser(intent, context.getString(R.string.share_backup_title)))
                 } else {
-                    android.widget.Toast.makeText(context, "Chyba při vytváření zálohy.", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(context, context.getString(R.string.backup_export_error), android.widget.Toast.LENGTH_SHORT).show()
                 }
             },
             onImportBackup = {
@@ -169,8 +125,24 @@ fun MainWorkspaceScreen(
         )
     }
 
+    if (showLanguageDialog) {
+        LanguageDialog(onDismiss = { showLanguageDialog = false })
+    }
+
+    if (showArchiveDialog) {
+        ArchiveDialog(
+            archivedNotes = allNotes.filter { it.isArchived },
+            archivedTodos = todos.filter { it.isArchived },
+            onRestoreNote = { viewModel.unarchiveNote(it) },
+            onDeleteNotePermanently = { viewModel.deleteNotePermanently(it) },
+            onRestoreTodo = { viewModel.unarchiveTodo(it) },
+            onDeleteTodoPermanently = { viewModel.deleteTodo(it) },
+            onDismiss = { showArchiveDialog = false }
+        )
+    }
+
     BoxWithConstraints(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).systemBarsPadding()) {
-        val isTabletLayout = maxWidth >= 700.dp // Galaxy Tab S9 vs Galaxy S26 Ultra
+        val isTabletLayout = maxWidth >= 700.dp
 
         Column(modifier = Modifier.fillMaxSize()) {
             // Top Bar
@@ -197,7 +169,7 @@ fun MainWorkspaceScreen(
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = null,
-                            tint = androidx.compose.ui.graphics.Color.White,
+                            tint = Color.White,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -205,20 +177,20 @@ fun MainWorkspaceScreen(
                         text = "InkAction",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = { 
                             viewModel.saveCurrentNoteManually() 
-                            android.widget.Toast.makeText(context, "Uloženo", android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(context, context.getString(R.string.saved), android.widget.Toast.LENGTH_SHORT).show()
                         }
                     ) {
                         Icon(
                             imageVector = Icons.Default.Save,
-                            contentDescription = "Save",
+                            contentDescription = stringResource(R.string.save),
                             tint = MaterialTheme.colorScheme.secondary
                         )
                     }
@@ -232,73 +204,97 @@ fun MainWorkspaceScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "New Note",
+                            contentDescription = stringResource(R.string.new_note),
                             tint = MaterialTheme.colorScheme.secondary
                         )
-                    }
-
-                    var showMenu by remember { mutableStateOf(false) }
-                    
-                    Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = "Menu",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
-                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                        ) {
-                            DropdownMenuItem(
-                                text = { 
-                                    Column {
-                                        Text("Auto-Push Status", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-                                        Text(
-                                            text = if (autoPushState.isProcessing) "Zpracovávám AI..." 
-                                                   else if (autoPushState.isArmed) "Čekám na pauzu (${autoPushState.remainingSeconds}s)" 
-                                                   else "Neaktivní (Piš)",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                },
-                                onClick = { showMenu = false }
-                            )
-                        }
                     }
 
                     IconButton(onClick = { viewModel.toggleTemplate() }) {
                         Icon(
                             imageVector = Icons.Default.GridOn,
-                            contentDescription = "Toggle Template",
+                            contentDescription = stringResource(R.string.toggle_template),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
-                    IconButton(onClick = { showSettings = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    var showOverflowMenu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { showOverflowMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = stringResource(R.string.menu),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        
+                        DropdownMenu(
+                            expanded = showOverflowMenu,
+                            onDismissRequest = { showOverflowMenu = false },
+                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                        ) {
+                            DropdownMenuItem(
+                                leadingIcon = {
+                                    Icon(Icons.Default.HourglassBottom, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                },
+                                text = { 
+                                    Column {
+                                        Text(stringResource(R.string.auto_push_status), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                        Text(
+                                            text = if (autoPushState.isProcessing) stringResource(R.string.auto_push_processing) 
+                                                   else if (autoPushState.isArmed) stringResource(R.string.auto_push_waiting, autoPushState.remainingSeconds) 
+                                                   else stringResource(R.string.auto_push_inactive),
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                },
+                                onClick = { showOverflowMenu = false }
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                leadingIcon = {
+                                    Icon(Icons.Default.Archive, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                },
+                                text = { Text(stringResource(R.string.archive_menu_item)) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showArchiveDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                leadingIcon = {
+                                    Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                },
+                                text = { Text(stringResource(R.string.language_menu_item)) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showLanguageDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                leadingIcon = {
+                                    Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                },
+                                text = { Text(stringResource(R.string.settings_title)) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showSettings = true
+                                }
+                            )
+                        }
                     }
                 }
             }
 
             // Workspace Content
             if (isTabletLayout) {
-                // Dual-Pane Layout for Galaxy Tab S9
+                // Dual-Pane Layout for Tablet
                 Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    // Left Canvas Pane
                     Box(
                         modifier = Modifier
                             .weight(1.1f)
                             .fillMaxHeight()
-                            .border(1.dp, MaterialTheme.colorScheme.outline)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
                     ) {
                         CanvasPaneContent(
                             viewModel = viewModel,
@@ -309,95 +305,135 @@ fun MainWorkspaceScreen(
                         )
                     }
 
-                    // Right Actions Pane
                     Column(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
                             .background(MaterialTheme.colorScheme.background)
                     ) {
-                        ActionsPaneContent(
-                            selectedTab = selectedActionTab,
-                            onTabSelected = { selectedActionTab = it },
-                            note = currentNote,
-                            allNotes = allNotes,
-                            enhancingNotes = enhancingNotes,
-                            todos = todos,
-                            events = events,
-                            folders = folders,
-                            onCreateFolder = { name, colorHex -> viewModel.createFolder(name, colorHex) },
-                            onMoveNote = { noteId, folderId -> viewModel.moveNoteToFolder(noteId, folderId) },
-                            onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) },
-                            onDeleteTodo = { id -> viewModel.archiveTodo(id) },
-                            onResumeDrawing = { noteToResume -> 
-                                viewModel.loadNoteToCanvas(noteToResume)
-                                viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
-                                    inkCanvasRef?.loadStrokes(strokes)
-                                }
-                                phoneNavTab = 0
-                            },
-                            onDeleteNote = { id -> viewModel.archiveNote(id) },
-                            onTogglePin = { id -> viewModel.toggleNotePin(id) },
-                            onEnhanceNote = { id -> viewModel.enhanceNote(id) },
-                            onUnarchiveNote = { id -> viewModel.unarchiveNote(id) },
-                            onUnarchiveTodo = { id -> viewModel.unarchiveTodo(id) }
+                        val tabTitles = listOf(
+                            stringResource(R.string.tab_notes),
+                            stringResource(R.string.tab_todos),
+                            stringResource(R.string.tab_calendar)
                         )
+                        TabRow(
+                            selectedTabIndex = tabletActionTab,
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            indicator = { tabPositions ->
+                                TabRowDefaults.SecondaryIndicator(
+                                    Modifier.tabIndicatorOffset(tabPositions[tabletActionTab]),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        ) {
+                            tabTitles.forEachIndexed { index, title ->
+                                Tab(
+                                    selected = tabletActionTab == index,
+                                    onClick = { tabletActionTab = index },
+                                    text = { Text(title, fontWeight = FontWeight.Bold) }
+                                )
+                            }
+                        }
+                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                            when (tabletActionTab) {
+                                0 -> NotesScreen(
+                                    note = currentNote, 
+                                    allNotes = allNotes.filter { !it.isArchived }, 
+                                    enhancingNotes = enhancingNotes,
+                                    folders = folders,
+                                    onCreateFolder = { name, colorHex -> viewModel.createFolder(name, colorHex) },
+                                    onMoveNote = { noteId, folderId -> viewModel.moveNoteToFolder(noteId, folderId) },
+                                    onResumeDrawing = { noteToResume -> 
+                                        viewModel.loadNoteToCanvas(noteToResume)
+                                        viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
+                                            inkCanvasRef?.loadStrokes(strokes)
+                                        }
+                                    }, 
+                                    onDeleteNote = { id -> viewModel.archiveNote(id) },
+                                    onTogglePin = { id -> viewModel.toggleNotePin(id) },
+                                    onEnhanceNote = { id -> viewModel.enhanceNote(id) }
+                                )
+                                1 -> TodosScreen(
+                                    todos = todos.filter { !it.isArchived }, 
+                                    onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) }, 
+                                    onDeleteTodo = { id -> viewModel.archiveTodo(id) },
+                                    onNavigateToNote = { noteId ->
+                                        val noteToResume = allNotes.find { it.id == noteId }
+                                        if (noteToResume != null) {
+                                            viewModel.loadNoteToCanvas(noteToResume)
+                                            viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
+                                                inkCanvasRef?.loadStrokes(strokes)
+                                            }
+                                        }
+                                    }
+                                )
+                                2 -> CalendarScreen(events = events)
+                            }
+                        }
                     }
                 }
             } else {
-                // Mobile Navigation Layout for Galaxy S26 Ultra
+                // 4-Tab Navigation for Phone (Canvas, Notes, Todos, Calendar)
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    if (phoneNavTab == 0) {
-                        CanvasPaneContent(
+                    when (phoneNavTab) {
+                        0 -> CanvasPaneContent(
                             viewModel = viewModel,
                             currentTool = currentTool,
                             currentColor = currentColor,
                             autoPushState = autoPushState,
                             onCanvasCreated = { inkCanvasRef = it }
                         )
-                    } else {
-                        ActionsPaneContent(
-                            selectedTab = selectedActionTab,
-                            onTabSelected = { selectedActionTab = it },
-                            note = currentNote,
-                            allNotes = allNotes,
+                        1 -> NotesScreen(
+                            note = currentNote, 
+                            allNotes = allNotes.filter { !it.isArchived }, 
                             enhancingNotes = enhancingNotes,
-                            todos = todos,
-                            events = events,
                             folders = folders,
                             onCreateFolder = { name, colorHex -> viewModel.createFolder(name, colorHex) },
                             onMoveNote = { noteId, folderId -> viewModel.moveNoteToFolder(noteId, folderId) },
-                            onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) },
-                            onDeleteTodo = { id -> viewModel.archiveTodo(id) },
                             onResumeDrawing = { noteToResume -> 
                                 viewModel.loadNoteToCanvas(noteToResume)
                                 viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
                                     inkCanvasRef?.loadStrokes(strokes)
                                 }
                                 phoneNavTab = 0
-                            },
+                            }, 
                             onDeleteNote = { id -> viewModel.archiveNote(id) },
                             onTogglePin = { id -> viewModel.toggleNotePin(id) },
-                            onEnhanceNote = { id -> viewModel.enhanceNote(id) },
-                            onUnarchiveNote = { id -> viewModel.unarchiveNote(id) },
-                            onUnarchiveTodo = { id -> viewModel.unarchiveTodo(id) }
+                            onEnhanceNote = { id -> viewModel.enhanceNote(id) }
                         )
+                        2 -> TodosScreen(
+                            todos = todos.filter { !it.isArchived }, 
+                            onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) }, 
+                            onDeleteTodo = { id -> viewModel.archiveTodo(id) },
+                            onNavigateToNote = { noteId ->
+                                val noteToResume = allNotes.find { it.id == noteId }
+                                if (noteToResume != null) {
+                                    viewModel.loadNoteToCanvas(noteToResume)
+                                    viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
+                                        inkCanvasRef?.loadStrokes(strokes)
+                                    }
+                                    phoneNavTab = 0
+                                }
+                            }
+                        )
+                        3 -> CalendarScreen(events = events)
                     }
                 }
 
-                // Bottom Bar for S26 Ultra
+                // 4-Tab Bottom Navigation Bar
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onBackground
+                    contentColor = MaterialTheme.colorScheme.onSurface
                 ) {
                     NavigationBarItem(
                         selected = phoneNavTab == 0,
                         onClick = { phoneNavTab = 0 },
-                        icon = { Icon(Icons.Default.Brush, contentDescription = "Canvas") },
-                        label = { Text("S-Pen") },
+                        icon = { Icon(Icons.Default.Brush, contentDescription = stringResource(R.string.tab_canvas)) },
+                        label = { Text(stringResource(R.string.tab_canvas)) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.secondary,
-                            selectedTextColor = MaterialTheme.colorScheme.secondary,
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
                             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -405,11 +441,35 @@ fun MainWorkspaceScreen(
                     NavigationBarItem(
                         selected = phoneNavTab == 1,
                         onClick = { phoneNavTab = 1 },
-                        icon = { Icon(Icons.Default.AutoAwesome, contentDescription = "Actions") },
-                        label = { Text("Actions") },
+                        icon = { Icon(Icons.Default.Description, contentDescription = stringResource(R.string.tab_notes)) },
+                        label = { Text(stringResource(R.string.tab_notes)) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.secondary,
-                            selectedTextColor = MaterialTheme.colorScheme.secondary,
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                    NavigationBarItem(
+                        selected = phoneNavTab == 2,
+                        onClick = { phoneNavTab = 2 },
+                        icon = { Icon(Icons.Default.Checklist, contentDescription = stringResource(R.string.tab_todos)) },
+                        label = { Text(stringResource(R.string.tab_todos)) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                    NavigationBarItem(
+                        selected = phoneNavTab == 3,
+                        onClick = { phoneNavTab = 3 },
+                        icon = { Icon(Icons.Default.CalendarMonth, contentDescription = stringResource(R.string.tab_calendar)) },
+                        label = { Text(stringResource(R.string.tab_calendar)) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
                             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -430,6 +490,7 @@ fun CanvasPaneContent(
 ) {
     var canvasViewRef by remember { mutableStateOf<InkCanvasView?>(null) }
     val scrollState = androidx.compose.foundation.rememberScrollState()
+    val appSettings by viewModel.settings.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
         val systemDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
@@ -438,7 +499,6 @@ fun CanvasPaneContent(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
-            // Native S-Pen Canvas View
             AndroidView(
                 factory = { context ->
                     InkCanvasView(context).apply {
@@ -457,7 +517,7 @@ fun CanvasPaneContent(
                     .fillMaxWidth()
                     .height(10000.dp),
                 update = { view ->
-                    val isDark = viewModel.themeMode == "dark" || (viewModel.themeMode == "system" && systemDarkTheme)
+                    val isDark = appSettings.themeMode == "dark" || (appSettings.themeMode == "system" && systemDarkTheme)
                     view.isDarkMode = isDark
                     view.currentTool = currentTool
                     view.currentColor = currentColor
@@ -466,7 +526,6 @@ fun CanvasPaneContent(
             )
         }
 
-        // Floating Pen Toolbar
         FloatingToolbar(
             currentTool = currentTool,
             currentColor = currentColor,
@@ -480,7 +539,6 @@ fun CanvasPaneContent(
                 .padding(top = 12.dp)
         )
 
-        // Bottom Actionize bar
         Row(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -495,15 +553,20 @@ fun CanvasPaneContent(
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
                     .clickable { generateNote = !generateNote }
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
                     .padding(end = 12.dp)
             ) {
-                androidx.compose.material3.Checkbox(
+                Checkbox(
                     checked = generateNote,
                     onCheckedChange = { generateNote = it },
-                    colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+                    colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                 )
-                Text("Poznámka", fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
+                Text(
+                    stringResource(R.string.checkbox_note),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
             
             Spacer(modifier = Modifier.width(8.dp))
@@ -513,15 +576,20 @@ fun CanvasPaneContent(
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
                     .clickable { generateTodos = !generateTodos }
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
                     .padding(end = 12.dp)
             ) {
-                androidx.compose.material3.Checkbox(
+                Checkbox(
                     checked = generateTodos,
                     onCheckedChange = { generateTodos = it },
-                    colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+                    colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                 )
-                Text("Úkoly", fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
+                Text(
+                    stringResource(R.string.checkbox_todos),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
             
             Spacer(modifier = Modifier.width(12.dp))
@@ -543,13 +611,13 @@ fun CanvasPaneContent(
                 shape = CircleShape
             ) {
                 if (autoPushState.isProcessing) {
-                    androidx.compose.material3.CircularProgressIndicator(
+                    CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
                         color = Color.White,
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "Zpracovávám...", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(text = stringResource(R.string.processing), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 } else {
                     Icon(
                         imageVector = Icons.Default.AutoAwesome,
@@ -557,7 +625,7 @@ fun CanvasPaneContent(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "Actionize", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(text = stringResource(R.string.actionize), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -587,21 +655,20 @@ fun FloatingToolbar(
     Row(
         modifier = modifier
             .clip(CircleShape)
-            .background(androidx.compose.material3.MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
-            .border(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outline, CircleShape)
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // Tool buttons
         IconButton(
             onClick = { onSelectTool(ToolType.PEN) },
             modifier = Modifier.size(36.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Edit,
-                contentDescription = "Pen",
-                tint = if (currentTool == ToolType.PEN) androidx.compose.material3.MaterialTheme.colorScheme.secondary else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                contentDescription = stringResource(R.string.tool_pen),
+                tint = if (currentTool == ToolType.PEN) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -611,8 +678,8 @@ fun FloatingToolbar(
         ) {
             Icon(
                 imageVector = Icons.Default.Brush,
-                contentDescription = "Highlighter",
-                tint = if (currentTool == ToolType.HIGHLIGHTER) androidx.compose.material3.MaterialTheme.colorScheme.secondary else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                contentDescription = stringResource(R.string.tool_highlighter),
+                tint = if (currentTool == ToolType.HIGHLIGHTER) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -622,14 +689,13 @@ fun FloatingToolbar(
         ) {
             Icon(
                 imageVector = Icons.Default.Clear,
-                contentDescription = "Eraser",
-                tint = if (currentTool == ToolType.ERASER) androidx.compose.material3.MaterialTheme.colorScheme.secondary else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                contentDescription = stringResource(R.string.tool_eraser),
+                tint = if (currentTool == ToolType.ERASER) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
         Spacer(modifier = Modifier.width(4.dp))
 
-        // Color dots
         colors.forEach { colorInt ->
             Box(
                 modifier = Modifier
@@ -638,7 +704,7 @@ fun FloatingToolbar(
                     .background(Color(colorInt))
                     .border(
                         width = if (currentColor == colorInt) 2.dp else 0.dp,
-                        color = if (currentColor == colorInt) Color.White else Color.Transparent,
+                        color = if (currentColor == colorInt) MaterialTheme.colorScheme.primary else Color.Transparent,
                         shape = CircleShape
                     )
                     .clickable { onSelectColor(colorInt) }
@@ -648,99 +714,10 @@ fun FloatingToolbar(
         Spacer(modifier = Modifier.width(4.dp))
 
         IconButton(onClick = onUndo, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Default.Undo, contentDescription = "Undo", tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(Icons.Default.Undo, contentDescription = stringResource(R.string.undo), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         IconButton(onClick = onRedo, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Default.Redo, contentDescription = "Redo", tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-fun ActionsPaneContent(
-    selectedTab: Int,
-    onTabSelected: (Int) -> Unit,
-    note: com.inkaction.app.ai.NoteDto?,
-    allNotes: List<com.inkaction.app.data.SavedNote>,
-    enhancingNotes: Map<Long, Boolean>,
-    todos: List<com.inkaction.app.data.SavedTodo>,
-    events: List<com.inkaction.app.ai.EventDto>,
-    folders: List<com.inkaction.app.data.NoteFolder>,
-    onCreateFolder: (String, String) -> Unit,
-    onMoveNote: (Long, Long?) -> Unit,
-    onToggleTodo: (String, Boolean) -> Unit,
-    onDeleteTodo: (String) -> Unit,
-    onResumeDrawing: (com.inkaction.app.data.SavedNote) -> Unit,
-    onDeleteNote: (Long) -> Unit,
-    onTogglePin: (Long) -> Unit,
-    onEnhanceNote: (Long) -> Unit,
-    onUnarchiveNote: (Long) -> Unit,
-    onUnarchiveTodo: (String) -> Unit
-) {
-    val tabTitles = listOf("Notes", "Todos", "Calendar", "Archiv")
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(
-            selectedTabIndex = selectedTab,
-            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background,
-            contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
-            indicator = { tabPositions ->
-                TabRowDefaults.SecondaryIndicator(
-                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.primary
-                )
-            }
-        ) {
-            tabTitles.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { onTabSelected(index) },
-                    text = { Text(title, fontWeight = FontWeight.Bold) }
-                )
-            }
-        }
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when (selectedTab) {
-                0 -> NotesScreen(
-                    note = note, 
-                    allNotes = allNotes.filter { !it.isArchived }, 
-                    enhancingNotes = enhancingNotes,
-                    folders = folders,
-                    onCreateFolder = onCreateFolder,
-                    onMoveNote = onMoveNote,
-                    onResumeDrawing = onResumeDrawing, 
-                    onDeleteNote = onDeleteNote,
-                    onTogglePin = onTogglePin,
-                    onEnhanceNote = onEnhanceNote
-                )
-                1 -> TodosScreen(
-                    todos = todos.filter { !it.isArchived }, 
-                    onToggleTodo = onToggleTodo, 
-                    onDeleteTodo = onDeleteTodo,
-                    onNavigateToNote = { noteId ->
-                        val noteToResume = allNotes.find { it.id == noteId }
-                        if (noteToResume != null) {
-                            onResumeDrawing(noteToResume)
-                        }
-                    }
-                )
-                2 -> CalendarScreen(events = events)
-                3 -> Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                    Text("Archivované Poznámky", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
-                    val archivedNotes = allNotes.filter { it.isArchived }
-                    if (archivedNotes.isEmpty()) Text("Žádné archivované poznámky.", color = androidx.compose.material3.MaterialTheme.colorScheme.outline)
-                    archivedNotes.forEach { n ->
-                        Text("- ${n.title}", modifier = Modifier.clickable { onUnarchiveNote(n.id) }) 
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text("Archivované Úkoly", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
-                    val archivedTodos = todos.filter { it.isArchived }
-                    if (archivedTodos.isEmpty()) Text("Žádné archivované úkoly.", color = androidx.compose.material3.MaterialTheme.colorScheme.outline)
-                    archivedTodos.forEach { t ->
-                        Text("- ${t.text}", modifier = Modifier.clickable { onUnarchiveTodo(t.id) })
-                    }
-                }
-            }
+            Icon(Icons.Default.Redo, contentDescription = stringResource(R.string.redo), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
