@@ -50,6 +50,9 @@ class InkCanvasView @JvmOverloads constructor(
 
     var onStrokeStarted: (() -> Unit)? = null
     var onStrokeFinished: ((Int) -> Unit)? = null
+    var onFingerTouchBlocked: (() -> Unit)? = null
+
+    var isFingerDrawingEnabled: Boolean = true
 
     private var hasActiveStylus = false
 
@@ -77,9 +80,14 @@ class InkCanvasView @JvmOverloads constructor(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val toolType = event.getToolType(0)
         
-        // Strict Palm Rejection: ONLY allow S-Pen (Stylus/Eraser). Ignore all fingers/palms.
+        // Strict Palm Rejection: ONLY allow S-Pen (Stylus/Eraser) unless finger drawing is explicitly enabled.
         if (toolType != MotionEvent.TOOL_TYPE_STYLUS && toolType != MotionEvent.TOOL_TYPE_ERASER) {
-            return false
+            if (!isFingerDrawingEnabled) {
+                if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                    onFingerTouchBlocked?.invoke()
+                }
+                return false
+            }
         }
 
         val x = event.x

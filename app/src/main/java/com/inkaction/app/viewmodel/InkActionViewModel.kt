@@ -97,6 +97,15 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         canvasTemplate = (canvasTemplate + 1) % 4
     }
 
+    fun setFingerDrawingEnabled(enabled: Boolean) {
+        settingsRepository.setFingerDrawingEnabled(enabled)
+    }
+
+    fun toggleFingerDrawing() {
+        val current = settings.value.fingerDrawingEnabled
+        settingsRepository.setFingerDrawingEnabled(!current)
+    }
+
     fun saveSettings(
         apiKey: String,
         modelName: String,

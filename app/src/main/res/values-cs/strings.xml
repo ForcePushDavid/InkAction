@@ -82,4 +82,8 @@
     <string name="ready_to_install">Stažení dokončeno. Připraveno k instalaci.</string>
     <string name="install">Nainstalovat</string>
     <string name="download_failed">Stažení se nezdařilo. Zkontrolujte připojení k internetu.</string>
+
+    <string name="mode_finger_drawing">Kreslení prstem</string>
+    <string name="mode_stylus_only">Pouze stylus</string>
+    <string name="stylus_only_hint">Režim pouze pro stylus (dotyk ignorován). Klepněte na ikonu v liště pro kreslení prstem.</string>
 </resources>

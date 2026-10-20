@@ -12,12 +12,24 @@ android {
         applicationId = "com.inkaction.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 46
-        versionName = "2.3.0"
+        versionCode = 47
+        versionName = "2.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("play") {
+            dimension = "distribution"
+            buildConfigField("Boolean", "ENABLE_IN_APP_UPDATER", "false")
+        }
+        create("github") {
+            dimension = "distribution"
+            buildConfigField("Boolean", "ENABLE_IN_APP_UPDATER", "true")
         }
     }
 

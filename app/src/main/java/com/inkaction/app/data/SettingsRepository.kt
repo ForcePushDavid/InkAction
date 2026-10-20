@@ -13,7 +13,8 @@ data class AppSettings(
     val remindersEnabled: Boolean,
     val noteLanguage: String,
     val themeMode: String,
-    val defaultEventTime: String
+    val defaultEventTime: String,
+    val fingerDrawingEnabled: Boolean = true
 )
 
 class SettingsRepository(context: Context) {
@@ -30,8 +31,14 @@ class SettingsRepository(context: Context) {
             remindersEnabled = prefs.getBoolean("reminders_enabled", false),
             noteLanguage = prefs.getString("note_language", "Auto-detect") ?: "Auto-detect",
             themeMode = prefs.getString("theme_mode", "system") ?: "system",
-            defaultEventTime = prefs.getString("default_event_time", "08:00") ?: "08:00"
+            defaultEventTime = prefs.getString("default_event_time", "08:00") ?: "08:00",
+            fingerDrawingEnabled = prefs.getBoolean("finger_drawing_enabled", true)
         )
+    }
+
+    fun setFingerDrawingEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("finger_drawing_enabled", enabled).apply()
+        _settings.value = _settings.value.copy(fingerDrawingEnabled = enabled)
     }
 
     fun saveSettings(

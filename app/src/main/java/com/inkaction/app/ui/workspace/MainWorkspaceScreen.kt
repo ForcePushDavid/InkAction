@@ -129,9 +129,11 @@ fun MainWorkspaceScreen(
     }
 
     LaunchedEffect(Unit) {
-        val update = com.inkaction.app.util.UpdateManager.checkForUpdate(com.inkaction.app.BuildConfig.VERSION_NAME)
-        if (update != null) {
-            showUpdateDialog = true
+        if (com.inkaction.app.BuildConfig.ENABLE_IN_APP_UPDATER) {
+            val update = com.inkaction.app.util.UpdateManager.checkForUpdate(com.inkaction.app.BuildConfig.VERSION_NAME)
+            if (update != null) {
+                showUpdateDialog = true
+            }
         }
     }
 
@@ -533,6 +535,18 @@ fun CanvasPaneContent(
                             viewModel.currentStrokes.addAll(this.strokes)
                             viewModel.onStrokeFinished(count) { createOcrBitmaps() }
                         }
+                        var lastToastTime = 0L
+                        this.onFingerTouchBlocked = {
+                            val now = System.currentTimeMillis()
+                            if (now - lastToastTime > 3500) {
+                                lastToastTime = now
+                                android.widget.Toast.makeText(
+                                    context,
+                                    context.getString(R.string.stylus_only_hint),
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
                         canvasViewRef = this
                         onCanvasCreated(this)
                     }
@@ -545,6 +559,7 @@ fun CanvasPaneContent(
                     view.isDarkMode = isDark
                     view.currentTool = currentTool
                     view.currentColor = currentColor
+                    view.isFingerDrawingEnabled = appSettings.fingerDrawingEnabled
                     view.setTemplate(viewModel.canvasTemplate)
                 }
             )
@@ -553,6 +568,8 @@ fun CanvasPaneContent(
         FloatingToolbar(
             currentTool = currentTool,
             currentColor = currentColor,
+            isFingerDrawingEnabled = appSettings.fingerDrawingEnabled,
+            onToggleFingerDrawing = { viewModel.toggleFingerDrawing() },
             onSelectTool = { viewModel.setTool(it) },
             onSelectColor = { viewModel.setColor(it) },
             onUndo = { canvasViewRef?.undo() },
@@ -660,6 +677,8 @@ fun CanvasPaneContent(
 fun FloatingToolbar(
     currentTool: ToolType,
     currentColor: Int,
+    isFingerDrawingEnabled: Boolean,
+    onToggleFingerDrawing: () -> Unit,
     onSelectTool: (ToolType) -> Unit,
     onSelectColor: (Int) -> Unit,
     onUndo: () -> Unit,
@@ -715,6 +734,17 @@ fun FloatingToolbar(
                 imageVector = Icons.Default.Clear,
                 contentDescription = stringResource(R.string.tool_eraser),
                 tint = if (currentTool == ToolType.ERASER) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        IconButton(
+            onClick = onToggleFingerDrawing,
+            modifier = Modifier.size(36.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.TouchApp,
+                contentDescription = stringResource(if (isFingerDrawingEnabled) R.string.mode_finger_drawing else R.string.mode_stylus_only),
+                tint = if (isFingerDrawingEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
             )
         }
 

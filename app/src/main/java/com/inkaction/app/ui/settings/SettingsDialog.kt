@@ -119,16 +119,18 @@ fun SettingsDialog(
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.outline
                     )
-                    IconButton(
-                        onClick = onCheckForUpdates,
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SystemUpdate,
-                            contentDescription = stringResource(R.string.check_for_updates),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
+                    if (com.inkaction.app.BuildConfig.ENABLE_IN_APP_UPDATER) {
+                        IconButton(
+                            onClick = onCheckForUpdates,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SystemUpdate,
+                                contentDescription = stringResource(R.string.check_for_updates),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }

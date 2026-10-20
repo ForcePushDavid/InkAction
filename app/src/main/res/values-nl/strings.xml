@@ -82,4 +82,8 @@
     <string name="ready_to_install">Download voltooid. Klaar om te installeren.</string>
     <string name="install">Installeren</string>
     <string name="download_failed">Downloaden mislukt. Controleer je internetverbinding.</string>
+
+    <string name="mode_finger_drawing">Tekenen met vinger</string>
+    <string name="mode_stylus_only">Alleen stylus</string>
+    <string name="stylus_only_hint">Stylusmodus actief (aanraking genegeerd). Tik op het pictogram in de werkbalk om met de vinger te tekenen.</string>
 </resources>

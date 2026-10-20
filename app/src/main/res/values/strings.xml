@@ -82,4 +82,8 @@
     <string name="ready_to_install">Download complete. Ready to install.</string>
     <string name="install">Install</string>
     <string name="download_failed">Download failed. Please check your connection.</string>
+
+    <string name="mode_finger_drawing">Finger drawing</string>
+    <string name="mode_stylus_only">Stylus only</string>
+    <string name="stylus_only_hint">Stylus mode active (touch ignored). Tap touch icon in toolbar to draw with finger.</string>
 </resources>
