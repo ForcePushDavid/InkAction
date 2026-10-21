@@ -94,4 +94,14 @@
     <string name="export_all_notes_md">Export all (.md ZIP)</string>
     <string name="export_notes_success">Notes exported successfully</string>
     <string name="export_notes_empty">No notes to export</string>
+
+    <string name="share_dialog_title">Share note</string>
+    <string name="share_dialog_subtitle">Choose how to share this note:</string>
+    <string name="share_handwritten_option">Handwritten note (Image)</string>
+    <string name="share_handwritten_desc">Original S-Pen handwriting as PNG image</string>
+    <string name="share_text_option">Text note (Markdown)</string>
+    <string name="share_text_desc">Synthesized markdown text &amp; tasks</string>
+    <string name="no_handwriting_available">No handwritten strokes found for this note.</string>
+    <string name="share_handwritten_note">Share handwritten note</string>
+    <string name="share_text_note">Share text note</string>
 </resources>

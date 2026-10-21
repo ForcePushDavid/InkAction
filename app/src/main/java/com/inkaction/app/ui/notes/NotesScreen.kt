@@ -32,6 +32,8 @@ import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Search
@@ -46,12 +48,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -90,6 +97,8 @@ fun NotesScreen(
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var selectedFolderId by remember { mutableStateOf<Long?>(null) }
     var newFolderName by remember { mutableStateOf("") }
+    var noteToShare by remember { mutableStateOf<SavedNote?>(null) }
+    val coroutineScope = rememberCoroutineScope()
     
     val allTags = allNotes.flatMap { it.tags }.distinct().sorted()
     
@@ -131,6 +140,116 @@ fun NotesScreen(
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { showCreateFolderDialog = false }) {
                     Text("Zrušit")
+                }
+            }
+        )
+    }
+
+    if (noteToShare != null) {
+        val targetNote = noteToShare!!
+        AlertDialog(
+            onDismissRequest = { noteToShare = null },
+            title = {
+                Text(
+                    text = stringResource(R.string.share_dialog_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = stringResource(R.string.share_dialog_subtitle),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Option 1: Handwritten note (PNG Image)
+                    Surface(
+                        onClick = {
+                            val n = targetNote
+                            noteToShare = null
+                            coroutineScope.launch {
+                                val success = com.inkaction.app.util.NoteExportUtil.shareHandwrittenNote(context, n)
+                                if (!success) {
+                                    Toast.makeText(context, context.getString(R.string.no_handwriting_available), Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Brush,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.share_handwritten_option),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = stringResource(R.string.share_handwritten_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    // Option 2: Text / Markdown
+                    Surface(
+                        onClick = {
+                            val n = targetNote
+                            noteToShare = null
+                            com.inkaction.app.util.NoteExportUtil.shareTextNote(context, n)
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Description,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.share_text_option),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = stringResource(R.string.share_text_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { noteToShare = null }) {
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -333,7 +452,8 @@ fun NotesScreen(
                             onTogglePin(savedNote.id) 
                         },
                         onEnhance = { onEnhanceNote(savedNote.id) },
-                        isEnhancing = enhancingNotes[savedNote.id] == true
+                        isEnhancing = enhancingNotes[savedNote.id] == true,
+                        onShare = { noteToShare = savedNote }
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -498,7 +618,8 @@ fun SavedNoteCard(
     onDeleteNote: () -> Unit,
     onTogglePin: () -> Unit,
     onEnhance: () -> Unit,
-    isEnhancing: Boolean
+    isEnhancing: Boolean,
+    onShare: () -> Unit
 ) {
     var folderMenuExpanded by remember { mutableStateOf(false) }
     var isDetailsExpanded by remember { mutableStateOf(false) }
@@ -674,24 +795,7 @@ fun SavedNoteCard(
                 }
 
                 IconButton(
-                    onClick = {
-                        val text = buildString {
-                            append("# ").append(savedNote.title.ifBlank { "Poznámka" }).append("\n\n")
-                            if (savedNote.summary.isNotBlank()) {
-                                append(savedNote.summary).append("\n\n")
-                            }
-                            append(savedNote.markdown)
-                            if (!savedNote.aiEnhancement.isNullOrBlank()) {
-                                append("\n\n---\n### AI Insight\n").append(savedNote.aiEnhancement)
-                            }
-                        }
-                        val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(android.content.Intent.EXTRA_SUBJECT, savedNote.title)
-                            putExtra(android.content.Intent.EXTRA_TEXT, text)
-                        }
-                        context.startActivity(android.content.Intent.createChooser(sendIntent, context.getString(R.string.share_note)))
-                    },
+                    onClick = onShare,
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(

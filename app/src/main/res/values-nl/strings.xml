@@ -94,4 +94,14 @@
     <string name="export_all_notes_md">Alles exporteren (.md ZIP)</string>
     <string name="export_notes_success">Notities succesvol geëxporteerd</string>
     <string name="export_notes_empty">Geen notities om te exporteren</string>
+
+    <string name="share_dialog_title">Notitie delen</string>
+    <string name="share_dialog_subtitle">Kies hoe je deze notitie wilt delen:</string>
+    <string name="share_handwritten_option">Handgeschreven notitie (Afbeelding)</string>
+    <string name="share_handwritten_desc">Origineel S-Pen handschrift als PNG-afbeelding</string>
+    <string name="share_text_option">Tekstnotitie (Markdown)</string>
+    <string name="share_text_desc">Gestructureerde tekst en taken</string>
+    <string name="no_handwriting_available">Geen handgeschreven notitie gevonden voor deze notitie.</string>
+    <string name="share_handwritten_note">Handgeschreven notitie delen</string>
+    <string name="share_text_note">Tekstnotitie delen</string>
 </resources>

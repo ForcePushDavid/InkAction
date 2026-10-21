@@ -94,4 +94,14 @@
     <string name="export_all_notes_md">Exportovat vše (.md ZIP)</string>
     <string name="export_notes_success">Poznámky úspěšně exportovány</string>
     <string name="export_notes_empty">Žádné poznámky k exportu</string>
+
+    <string name="share_dialog_title">Sdílet poznámku</string>
+    <string name="share_dialog_subtitle">Zvolte formát sdílení poznámky:</string>
+    <string name="share_handwritten_option">Ručně psaná (Obrázek PNG)</string>
+    <string name="share_handwritten_desc">Původní rukopis perem S-Pen jako obrázek</string>
+    <string name="share_text_option">Textová (Markdown)</string>
+    <string name="share_text_desc">Přepsaný strukturovaný text a úkoly</string>
+    <string name="no_handwriting_available">Pro tuto poznámku nebyl nalezen žádný rukopis.</string>
+    <string name="share_handwritten_note">Sdílet ručně psanou poznámku</string>
+    <string name="share_text_note">Sdílet textovou poznámku</string>
 </resources>
