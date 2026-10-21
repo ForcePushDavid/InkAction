@@ -29,12 +29,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.ui.res.stringResource
+import com.inkaction.app.R
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -168,7 +173,48 @@ fun NotesScreen(
                 }
             }
         } else {
-            Text("Historie (Knihovna)", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Historie (Knihovna)",
+                    color = MaterialTheme.colorScheme.outline,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        val uri = com.inkaction.app.util.BackupUtil.exportNotesToMarkdownZip(context, allNotes)
+                        if (uri != null) {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "application/zip"
+                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(android.content.Intent.createChooser(intent, context.getString(R.string.export_all_notes_md)))
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.export_notes_empty), Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = stringResource(R.string.export_all_notes_md),
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.export_all_notes_md),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
             
             OutlinedTextField(
                 value = searchQuery,
@@ -342,8 +388,27 @@ fun NoteCard(note: NoteDto, context: Context) {
                     }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Print,
-                        contentDescription = "Export to PDF",
+                        imageVector = Icons.Default.PictureAsPdf,
+                        contentDescription = stringResource(R.string.export_pdf),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        val text = "# ${note.title}\n\n${note.summary}\n\n${note.markdown}"
+                        val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_SUBJECT, note.title)
+                            putExtra(android.content.Intent.EXTRA_TEXT, text)
+                        }
+                        context.startActivity(android.content.Intent.createChooser(sendIntent, context.getString(R.string.share_note)))
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = stringResource(R.string.share_note),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
@@ -352,14 +417,14 @@ fun NoteCard(note: NoteDto, context: Context) {
                 IconButton(
                     onClick = {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip = ClipData.newPlainText("Synthesized Note", "# ${note.title}\n\n${note.summary}\n\n${note.markdown}")
+                        val clip = ClipData.newPlainText(note.title, "# ${note.title}\n\n${note.summary}\n\n${note.markdown}")
                         clipboard.setPrimaryClip(clip)
-                        Toast.makeText(context, "Note copied to clipboard!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.note_copied), Toast.LENGTH_SHORT).show()
                     }
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy Note",
+                        contentDescription = stringResource(R.string.copy_note),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
@@ -578,13 +643,95 @@ fun SavedNoteCard(
             }
         }
 
-        // AI Enhance button - below content, not in header
-        if (savedNote.aiEnhancement == null) {
-            Spacer(modifier = Modifier.height(12.dp))
+        // Actions row (Export PDF, Share, Copy, and AI Enhance)
+        Spacer(modifier = Modifier.height(14.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left: Export actions
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(
+                    onClick = {
+                        com.inkaction.app.util.PdfExportUtil.exportNoteToPdf(
+                            context,
+                            savedNote.title,
+                            "${savedNote.summary}\n\n${savedNote.markdown}"
+                        )
+                    },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PictureAsPdf,
+                        contentDescription = stringResource(R.string.export_pdf),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        val text = buildString {
+                            append("# ").append(savedNote.title.ifBlank { "Poznámka" }).append("\n\n")
+                            if (savedNote.summary.isNotBlank()) {
+                                append(savedNote.summary).append("\n\n")
+                            }
+                            append(savedNote.markdown)
+                            if (!savedNote.aiEnhancement.isNullOrBlank()) {
+                                append("\n\n---\n### AI Insight\n").append(savedNote.aiEnhancement)
+                            }
+                        }
+                        val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_SUBJECT, savedNote.title)
+                            putExtra(android.content.Intent.EXTRA_TEXT, text)
+                        }
+                        context.startActivity(android.content.Intent.createChooser(sendIntent, context.getString(R.string.share_note)))
+                    },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = stringResource(R.string.share_note),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        val text = buildString {
+                            append("# ").append(savedNote.title.ifBlank { "Poznámka" }).append("\n\n")
+                            if (savedNote.summary.isNotBlank()) {
+                                append(savedNote.summary).append("\n\n")
+                            }
+                            append(savedNote.markdown)
+                            if (!savedNote.aiEnhancement.isNullOrBlank()) {
+                                append("\n\n---\n### AI Insight\n").append(savedNote.aiEnhancement)
+                            }
+                        }
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText(savedNote.title, text)
+                        clipboard.setPrimaryClip(clip)
+                        Toast.makeText(context, context.getString(R.string.note_copied), Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = stringResource(R.string.copy_note),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // Right: AI Enhance button
+            if (savedNote.aiEnhancement == null) {
                 if (isEnhancing) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.tertiary, strokeWidth = 2.dp)

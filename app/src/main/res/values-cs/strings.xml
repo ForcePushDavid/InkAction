@@ -86,4 +86,12 @@
     <string name="mode_finger_drawing">Kreslení prstem</string>
     <string name="mode_stylus_only">Pouze stylus</string>
     <string name="stylus_only_hint">Režim pouze pro stylus (dotyk ignorován). Klepněte na ikonu v liště pro kreslení prstem.</string>
+
+    <string name="export_pdf">Exportovat do PDF</string>
+    <string name="share_note">Sdílet poznámku</string>
+    <string name="copy_note">Zkopírovat poznámku</string>
+    <string name="note_copied">Poznámka zkopírována do schránky</string>
+    <string name="export_all_notes_md">Exportovat vše (.md ZIP)</string>
+    <string name="export_notes_success">Poznámky úspěšně exportovány</string>
+    <string name="export_notes_empty">Žádné poznámky k exportu</string>
 </resources>

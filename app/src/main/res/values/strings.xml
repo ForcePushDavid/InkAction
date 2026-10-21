@@ -86,4 +86,12 @@
     <string name="mode_finger_drawing">Finger drawing</string>
     <string name="mode_stylus_only">Stylus only</string>
     <string name="stylus_only_hint">Stylus mode active (touch ignored). Tap touch icon in toolbar to draw with finger.</string>
+
+    <string name="export_pdf">Export to PDF</string>
+    <string name="share_note">Share note</string>
+    <string name="copy_note">Copy note</string>
+    <string name="note_copied">Note copied to clipboard</string>
+    <string name="export_all_notes_md">Export all (.md ZIP)</string>
+    <string name="export_notes_success">Notes exported successfully</string>
+    <string name="export_notes_empty">No notes to export</string>
 </resources>
