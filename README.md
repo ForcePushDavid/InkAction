@@ -9,7 +9,7 @@
 [![Theme: Indigo Ink](https://img.shields.io/badge/Theme-Indigo%20Ink-6366F1)](#)
 [![S-Pen: Hardware Optimized](https://img.shields.io/badge/S--Pen-Palm%20Rejection%20%26%20Pressure-007AFF)](#)
 [![AI Engine: Google Gemini](https://img.shields.io/badge/AI%20Engine-Google%20Gemini%20Multimodal-4285F4)](https://ai.google.dev/)
-[![Release: v2.3.0](https://img.shields.io/badge/Release-v2.3.0-success)](https://github.com/ForcePushDavid/InkAction/releases)
+[![Release: v2.4.5](https://img.shields.io/badge/Release-v2.4.5-success)](https://github.com/ForcePushDavid/InkAction/releases)
 
 *Write thoughts freely with your Samsung S-Pen. InkAction senses when you pause and uses Google Gemini multimodal agents to synthesize clean Markdown notes, actionable Todo task checklists, and automatic calendar appointments.*
 
@@ -20,6 +20,19 @@
 ## 🌟 Key Features
 
 - **Zero Note Re-reading**: Never struggle to decipher messy handwriting or forgotten sketches again.
+- **☁️ Zero-Knowledge Cloud Sync (E2EE)**:
+  - **Cross-Device Sync**: Seamlessly sync notes and stroke drawings between Samsung Galaxy S26 Ultra (phone) and Galaxy Tab S9 (tablet).
+  - **1-Click Google SSO & Email Auth**: Built-in Google Identity authentication with bundled Firebase backend—zero manual server setup required.
+  - **AES-256-GCM Encryption**: All notes and raw stroke vectors are encrypted directly on-device with keys derived from a custom **Sync Passphrase** via PBKDF2 (100,000 iterations). Plaintext notes and Gemini API keys never touch the cloud.
+  - **GZIP Stream Compression & Auto-Chunking**: Stroke coordinates are compressed with GZIP (reducing payload size by 90–95%) and automatically chunked into subcollections for giant drawings, completely eliminating Firestore's 1 MiB document limit.
+  - **100% Offline Privacy Toggle**: A strict toggle completely disables cloud sync and network requests for users who prefer 100% local operation.
+- **🖊️ Interactive Pen Stroke Thickness UX**:
+  - Interactive tap-to-cycle stroke width on selected color bullet (`2.5f` Extra Fine, `4.0f` Fine, `6.5f` Medium, `10.0f` Bold).
+  - Animated spring scaling and haptic feedback as you cycle thickness directly on the toolbar.
+- **📱 Responsive Tablet UX & M3 Redesign**:
+  - **Adaptive Navigation Rail**: Space-efficient 76 dp vertical rail on tablets preserving >90% drawing screen area.
+  - **Dual-Pane Reference Panel**: Optional side-by-side view (70% full-screen canvas / 30% reference panel) in landscape.
+  - **Material 3 Redesign**: Notes & Tasks tabs redesigned with capsule search bars, folder FilterChips, Todoist-style priority checkboxes, and ElevatedCards.
 - **Hardware S-Pen & Stylus Optimization**:
   - Pressure-sensitive stylus engine (`MotionEvent.TOOL_TYPE_STYLUS`).
   - True **Hardware Palm Rejection** (ignores accidental finger touches when the stylus is in proximity).
@@ -28,9 +41,9 @@
 - **"Done Writing" Auto-Push Engine**:
   - Automatically dispatches high-contrast bitmap snapshots to Google Gemini once you stop writing.
   - Non-intrusive status pill in the top bar with countdown and progress states.
-- **Indigo Ink Material 3 Design**:
-  - Purpose-built palette featuring Deep Indigo (`#8B7CF6`), Radiant Teal (`#2DD4BF`), and Warm Amber (`#F5B451`).
-  - Standardized M3 shapes (12 dp / 16 dp / 28 dp) and full Light & Dark mode support.
+- **Sharing & Export Options**:
+  - Share format selection dialog: choose between high-res handwritten PNG image or clean formatted Markdown text.
+  - PDF export and full ZIP backup / restore.
 - **In-App Self-Updater**:
   - Direct GitHub Releases integration without requiring Google Play or Obtainium.
   - Automatic background check on launch, download progress reporting, and one-tap install.
@@ -67,6 +80,13 @@ flowchart TD
         G --> K[saved_todos.json + Home Widget]
         H --> L[CalendarContract Event Sync]
         I --> M[Topic Metadata & Folders]
+    end
+
+    subgraph Cloud [Zero-Knowledge E2EE Cloud Sync]
+        J & M --> N[GZIP Compression]
+        N --> O[AES-256-GCM + PBKDF2 Vault]
+        O -->|Zero-Knowledge Ciphertext| P["Google Firebase Firestore (users/uid/notes)"]
+        P -->|Bidirectional Pull & Decrypt| J
     end
 ```
 

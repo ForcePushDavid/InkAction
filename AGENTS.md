@@ -1,6 +1,6 @@
 # 🤖 InkAction AI Agent Architecture
 
-InkAction processes raw handwritten stylus input through a coordinated multimodal agent pipeline powered by **Google Gemini (1.5 Flash / 2.0)**.
+InkAction processes raw handwritten stylus input through a coordinated multimodal agent pipeline powered by **Google Gemini (3.8 Flash / 2.5 Flash / 2.5 Pro / 2.0 Flash)**.
 
 Instead of generic OCR that simply prints raw text, InkAction executes **4 specialized sub-agents** in a unified inference pass to turn visual scribbles into structured actions.
 
