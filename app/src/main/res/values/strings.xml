@@ -104,4 +104,6 @@
     <string name="no_handwriting_available">No handwritten strokes found for this note.</string>
     <string name="share_handwritten_note">Share handwritten note</string>
     <string name="share_text_note">Share text note</string>
+    <string name="reference_panel">Reference panel</string>
+    <string name="toggle_reference_panel">Toggle reference panel</string>
 </resources>

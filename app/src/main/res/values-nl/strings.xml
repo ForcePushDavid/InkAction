@@ -104,4 +104,6 @@
     <string name="no_handwriting_available">Geen handgeschreven notitie gevonden voor deze notitie.</string>
     <string name="share_handwritten_note">Handgeschreven notitie delen</string>
     <string name="share_text_note">Tekstnotitie delen</string>
+    <string name="reference_panel">Referentiepaneel</string>
+    <string name="toggle_reference_panel">Referentiepaneel in-/uitschakelen</string>
 </resources>

@@ -79,8 +79,9 @@ fun MainWorkspaceScreen(
     val folders by viewModel.foldersFlow.collectAsState()
 
     // 0 = Canvas, 1 = Notes, 2 = Todos, 3 = Calendar
-    var phoneNavTab by remember { mutableIntStateOf(0) }
-    var tabletActionTab by remember { mutableIntStateOf(0) }
+    var currentNavTab by remember { mutableIntStateOf(0) }
+    var isTabletReferencePanelOpen by remember { mutableStateOf(false) }
+    var tabletReferenceTab by remember { mutableIntStateOf(0) }
 
     val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.GetContent()
@@ -159,278 +160,368 @@ fun MainWorkspaceScreen(
 
     BoxWithConstraints(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).systemBarsPadding()) {
         val isTabletLayout = maxWidth >= 700.dp
+        val isLandscape = maxWidth > maxHeight
 
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Top Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+        Row(modifier = Modifier.fillMaxSize()) {
+            if (isTabletLayout) {
+                // Navigation Rail for Tablet on Left
+                NavigationRail(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.width(76.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.primary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    NavigationRailItem(
+                        selected = currentNavTab == 0,
+                        onClick = { currentNavTab = 0 },
+                        icon = { Icon(Icons.Default.Brush, contentDescription = stringResource(R.string.tab_canvas)) },
+                        label = { Text(stringResource(R.string.tab_canvas), fontSize = 11.sp, fontWeight = FontWeight.Medium) },
+                        colors = NavigationRailItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-                    Text(
-                        text = "InkAction",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    NavigationRailItem(
+                        selected = currentNavTab == 1,
+                        onClick = { currentNavTab = 1 },
+                        icon = { Icon(Icons.Default.Description, contentDescription = stringResource(R.string.tab_notes)) },
+                        label = { Text(stringResource(R.string.tab_notes), fontSize = 11.sp, fontWeight = FontWeight.Medium) },
+                        colors = NavigationRailItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                    NavigationRailItem(
+                        selected = currentNavTab == 2,
+                        onClick = { currentNavTab = 2 },
+                        icon = { Icon(Icons.Default.Checklist, contentDescription = stringResource(R.string.tab_todos)) },
+                        label = { Text(stringResource(R.string.tab_todos), fontSize = 11.sp, fontWeight = FontWeight.Medium) },
+                        colors = NavigationRailItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                    NavigationRailItem(
+                        selected = currentNavTab == 3,
+                        onClick = { currentNavTab = 3 },
+                        icon = { Icon(Icons.Default.CalendarMonth, contentDescription = stringResource(R.string.tab_calendar)) },
+                        label = { Text(stringResource(R.string.tab_calendar), fontSize = 11.sp, fontWeight = FontWeight.Medium) },
+                        colors = NavigationRailItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     )
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = { 
-                            viewModel.saveCurrentNoteManually() 
-                            android.widget.Toast.makeText(context, context.getString(R.string.saved), android.widget.Toast.LENGTH_SHORT).show()
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Save,
-                            contentDescription = stringResource(R.string.save),
-                            tint = MaterialTheme.colorScheme.secondary
-                        )
-                    }
-                    
-                    IconButton(
-                        onClick = {
-                            viewModel.createNewNote()
-                            inkCanvasRef?.loadStrokes(emptyList())
-                            phoneNavTab = 0
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = stringResource(R.string.new_note),
-                            tint = MaterialTheme.colorScheme.secondary
-                        )
-                    }
+                VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
 
-                    IconButton(onClick = { viewModel.toggleTemplate() }) {
-                        Icon(
-                            imageVector = Icons.Default.GridOn,
-                            contentDescription = stringResource(R.string.toggle_template),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    var showOverflowMenu by remember { mutableStateOf(false) }
-                    Box {
-                        IconButton(onClick = { showOverflowMenu = true }) {
+            // Right side Column (TopBar + Content + BottomBar if phone)
+            Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                // Top Bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = stringResource(R.string.menu),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Text(
+                            text = "InkAction",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { 
+                                viewModel.saveCurrentNoteManually() 
+                                android.widget.Toast.makeText(context, context.getString(R.string.saved), android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Save,
+                                contentDescription = stringResource(R.string.save),
+                                tint = MaterialTheme.colorScheme.secondary
                             )
                         }
                         
-                        DropdownMenu(
-                            expanded = showOverflowMenu,
-                            onDismissRequest = { showOverflowMenu = false },
-                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                        IconButton(
+                            onClick = {
+                                viewModel.createNewNote()
+                                inkCanvasRef?.loadStrokes(emptyList())
+                                currentNavTab = 0
+                            }
                         ) {
-                            DropdownMenuItem(
-                                leadingIcon = {
-                                    Icon(Icons.Default.HourglassBottom, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                },
-                                text = { 
-                                    Column {
-                                        Text(stringResource(R.string.auto_push_status), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                                        Text(
-                                            text = if (autoPushState.isProcessing) stringResource(R.string.auto_push_processing) 
-                                                   else if (autoPushState.isArmed) stringResource(R.string.auto_push_waiting, autoPushState.remainingSeconds) 
-                                                   else stringResource(R.string.auto_push_inactive),
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = stringResource(R.string.new_note),
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+
+                        IconButton(onClick = { viewModel.toggleTemplate() }) {
+                            Icon(
+                                imageVector = Icons.Default.GridOn,
+                                contentDescription = stringResource(R.string.toggle_template),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        if (isTabletLayout && currentNavTab == 0 && isLandscape) {
+                            IconButton(onClick = { isTabletReferencePanelOpen = !isTabletReferencePanelOpen }) {
+                                Icon(
+                                    imageVector = Icons.Default.VerticalSplit,
+                                    contentDescription = stringResource(R.string.toggle_reference_panel),
+                                    tint = if (isTabletReferencePanelOpen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        var showOverflowMenu by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(onClick = { showOverflowMenu = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = stringResource(R.string.menu),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            
+                            DropdownMenu(
+                                expanded = showOverflowMenu,
+                                onDismissRequest = { showOverflowMenu = false },
+                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                            ) {
+                                DropdownMenuItem(
+                                    leadingIcon = {
+                                        Icon(Icons.Default.HourglassBottom, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    },
+                                    text = { 
+                                        Column {
+                                            Text(stringResource(R.string.auto_push_status), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                            Text(
+                                                text = if (autoPushState.isProcessing) stringResource(R.string.auto_push_processing) 
+                                                       else if (autoPushState.isArmed) stringResource(R.string.auto_push_waiting, autoPushState.remainingSeconds) 
+                                                       else stringResource(R.string.auto_push_inactive),
+                                                fontSize = 12.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    },
+                                    onClick = { showOverflowMenu = false }
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Archive, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    },
+                                    text = { Text(stringResource(R.string.archive_menu_item)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        showArchiveDialog = true
                                     }
-                                },
-                                onClick = { showOverflowMenu = false }
-                            )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                leadingIcon = {
-                                    Icon(Icons.Default.Archive, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                },
-                                text = { Text(stringResource(R.string.archive_menu_item)) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    showArchiveDialog = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                leadingIcon = {
-                                    Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                },
-                                text = { Text(stringResource(R.string.language_menu_item)) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    showLanguageDialog = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                leadingIcon = {
-                                    Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                },
-                                text = { Text(stringResource(R.string.settings_title)) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    showSettings = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                leadingIcon = {
-                                    Icon(Icons.Default.SystemUpdate, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                },
-                                text = { Text(stringResource(R.string.check_for_updates)) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    showUpdateDialog = true
-                                }
-                            )
+                                )
+                                DropdownMenuItem(
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    },
+                                    text = { Text(stringResource(R.string.language_menu_item)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        showLanguageDialog = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    },
+                                    text = { Text(stringResource(R.string.settings_title)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        showSettings = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    leadingIcon = {
+                                        Icon(Icons.Default.SystemUpdate, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    },
+                                    text = { Text(stringResource(R.string.check_for_updates)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        showUpdateDialog = true
+                                    }
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // Workspace Content
-            if (isTabletLayout) {
-                // Dual-Pane Layout for Tablet
-                Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1.1f)
-                            .fillMaxHeight()
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                    ) {
-                        CanvasPaneContent(
-                            viewModel = viewModel,
-                            currentTool = currentTool,
-                            currentColor = currentColor,
-                            autoPushState = autoPushState,
-                            onCanvasCreated = { inkCanvasRef = it }
-                        )
-                    }
-
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .background(MaterialTheme.colorScheme.background)
-                    ) {
-                        val tabTitles = listOf(
-                            stringResource(R.string.tab_notes),
-                            stringResource(R.string.tab_todos),
-                            stringResource(R.string.tab_calendar)
-                        )
-                        TabRow(
-                            selectedTabIndex = tabletActionTab,
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            contentColor = MaterialTheme.colorScheme.onSurface,
-                            indicator = { tabPositions ->
-                                TabRowDefaults.SecondaryIndicator(
-                                    Modifier.tabIndicatorOffset(tabPositions[tabletActionTab]),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        ) {
-                            tabTitles.forEachIndexed { index, title ->
-                                Tab(
-                                    selected = tabletActionTab == index,
-                                    onClick = { tabletActionTab = index },
-                                    text = { Text(title, fontWeight = FontWeight.Bold) }
-                                )
-                            }
-                        }
-                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                            when (tabletActionTab) {
-                                0 -> NotesScreen(
-                                    note = currentNote, 
-                                    allNotes = allNotes.filter { !it.isArchived }, 
-                                    enhancingNotes = enhancingNotes,
-                                    folders = folders,
-                                    onCreateFolder = { name, colorHex -> viewModel.createFolder(name, colorHex) },
-                                    onMoveNote = { noteId, folderId -> viewModel.moveNoteToFolder(noteId, folderId) },
-                                    onResumeDrawing = { noteToResume -> 
-                                        viewModel.loadNoteToCanvas(noteToResume)
-                                        viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
-                                            inkCanvasRef?.loadStrokes(strokes)
+                // Workspace Content Area
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    when (currentNavTab) {
+                        0 -> {
+                            if (isTabletLayout && isTabletReferencePanelOpen && isLandscape) {
+                                Row(modifier = Modifier.fillMaxSize()) {
+                                    Box(modifier = Modifier.weight(0.70f).fillMaxHeight()) {
+                                        CanvasPaneContent(
+                                            viewModel = viewModel,
+                                            currentTool = currentTool,
+                                            currentColor = currentColor,
+                                            autoPushState = autoPushState,
+                                            onCanvasCreated = { inkCanvasRef = it }
+                                        )
+                                    }
+                                    VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(0.30f)
+                                            .fillMaxHeight()
+                                            .background(MaterialTheme.colorScheme.surface)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.reference_panel),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            IconButton(
+                                                onClick = { isTabletReferencePanelOpen = false },
+                                                modifier = Modifier.size(28.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = stringResource(R.string.close),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
                                         }
-                                    }, 
-                                    onDeleteNote = { id -> viewModel.archiveNote(id) },
-                                    onTogglePin = { id -> viewModel.toggleNotePin(id) },
-                                    onEnhanceNote = { id -> viewModel.enhanceNote(id) }
-                                )
-                                1 -> TodosScreen(
-                                    todos = todos.filter { !it.isArchived }, 
-                                    onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) }, 
-                                    onDeleteTodo = { id -> viewModel.archiveTodo(id) },
-                                    onNavigateToNote = { noteId ->
-                                        val noteToResume = allNotes.find { it.id == noteId }
-                                        if (noteToResume != null) {
-                                            viewModel.loadNoteToCanvas(noteToResume)
-                                            viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
-                                                inkCanvasRef?.loadStrokes(strokes)
+                                        val refTabs = listOf(
+                                            stringResource(R.string.tab_notes),
+                                            stringResource(R.string.tab_todos)
+                                        )
+                                        TabRow(
+                                            selectedTabIndex = tabletReferenceTab,
+                                            containerColor = MaterialTheme.colorScheme.surface,
+                                            contentColor = MaterialTheme.colorScheme.onSurface
+                                        ) {
+                                            refTabs.forEachIndexed { idx, title ->
+                                                Tab(
+                                                    selected = tabletReferenceTab == idx,
+                                                    onClick = { tabletReferenceTab = idx },
+                                                    text = { Text(title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+                                                )
+                                            }
+                                        }
+                                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                                            if (tabletReferenceTab == 0) {
+                                                NotesScreen(
+                                                    note = currentNote,
+                                                    allNotes = allNotes.filter { !it.isArchived },
+                                                    enhancingNotes = enhancingNotes,
+                                                    folders = folders,
+                                                    onCreateFolder = { name, colorHex -> viewModel.createFolder(name, colorHex) },
+                                                    onMoveNote = { noteId, folderId -> viewModel.moveNoteToFolder(noteId, folderId) },
+                                                    onResumeDrawing = { noteToResume ->
+                                                        viewModel.loadNoteToCanvas(noteToResume)
+                                                        viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
+                                                            inkCanvasRef?.loadStrokes(strokes)
+                                                        }
+                                                        isTabletReferencePanelOpen = false
+                                                    },
+                                                    onDeleteNote = { id -> viewModel.archiveNote(id) },
+                                                    onTogglePin = { id -> viewModel.toggleNotePin(id) },
+                                                    onEnhanceNote = { id -> viewModel.enhanceNote(id) }
+                                                )
+                                            } else {
+                                                TodosScreen(
+                                                    todos = todos.filter { !it.isArchived },
+                                                    onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) },
+                                                    onDeleteTodo = { id -> viewModel.archiveTodo(id) },
+                                                    onNavigateToNote = { noteId ->
+                                                        val noteToResume = allNotes.find { it.id == noteId }
+                                                        if (noteToResume != null) {
+                                                            viewModel.loadNoteToCanvas(noteToResume)
+                                                            viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
+                                                                inkCanvasRef?.loadStrokes(strokes)
+                                                            }
+                                                            isTabletReferencePanelOpen = false
+                                                        }
+                                                    }
+                                                )
                                             }
                                         }
                                     }
+                                }
+                            } else {
+                                CanvasPaneContent(
+                                    viewModel = viewModel,
+                                    currentTool = currentTool,
+                                    currentColor = currentColor,
+                                    autoPushState = autoPushState,
+                                    onCanvasCreated = { inkCanvasRef = it }
                                 )
-                                2 -> CalendarScreen(events = events)
                             }
                         }
-                    }
-                }
-            } else {
-                // 4-Tab Navigation for Phone (Canvas, Notes, Todos, Calendar)
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    when (phoneNavTab) {
-                        0 -> CanvasPaneContent(
-                            viewModel = viewModel,
-                            currentTool = currentTool,
-                            currentColor = currentColor,
-                            autoPushState = autoPushState,
-                            onCanvasCreated = { inkCanvasRef = it }
-                        )
                         1 -> NotesScreen(
-                            note = currentNote, 
-                            allNotes = allNotes.filter { !it.isArchived }, 
+                            note = currentNote,
+                            allNotes = allNotes.filter { !it.isArchived },
                             enhancingNotes = enhancingNotes,
                             folders = folders,
                             onCreateFolder = { name, colorHex -> viewModel.createFolder(name, colorHex) },
                             onMoveNote = { noteId, folderId -> viewModel.moveNoteToFolder(noteId, folderId) },
-                            onResumeDrawing = { noteToResume -> 
+                            onResumeDrawing = { noteToResume ->
                                 viewModel.loadNoteToCanvas(noteToResume)
                                 viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
                                     inkCanvasRef?.loadStrokes(strokes)
                                 }
-                                phoneNavTab = 0
-                            }, 
+                                currentNavTab = 0
+                            },
                             onDeleteNote = { id -> viewModel.archiveNote(id) },
                             onTogglePin = { id -> viewModel.toggleNotePin(id) },
                             onEnhanceNote = { id -> viewModel.enhanceNote(id) }
                         )
                         2 -> TodosScreen(
-                            todos = todos.filter { !it.isArchived }, 
-                            onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) }, 
+                            todos = todos.filter { !it.isArchived },
+                            onToggleTodo = { id, currentStatus -> viewModel.toggleTodo(id, currentStatus) },
                             onDeleteTodo = { id -> viewModel.archiveTodo(id) },
                             onNavigateToNote = { noteId ->
                                 val noteToResume = allNotes.find { it.id == noteId }
@@ -439,7 +530,7 @@ fun MainWorkspaceScreen(
                                     viewModel.loadStrokesForNote(noteToResume.id) { strokes ->
                                         inkCanvasRef?.loadStrokes(strokes)
                                     }
-                                    phoneNavTab = 0
+                                    currentNavTab = 0
                                 }
                             }
                         )
@@ -447,59 +538,61 @@ fun MainWorkspaceScreen(
                     }
                 }
 
-                // 4-Tab Bottom Navigation Bar
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                ) {
-                    NavigationBarItem(
-                        selected = phoneNavTab == 0,
-                        onClick = { phoneNavTab = 0 },
-                        icon = { Icon(Icons.Default.Brush, contentDescription = stringResource(R.string.tab_canvas)) },
-                        label = { Text(stringResource(R.string.tab_canvas)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                // If on Phone, render Bottom NavigationBar
+                if (!isTabletLayout) {
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ) {
+                        NavigationBarItem(
+                            selected = currentNavTab == 0,
+                            onClick = { currentNavTab = 0 },
+                            icon = { Icon(Icons.Default.Brush, contentDescription = stringResource(R.string.tab_canvas)) },
+                            label = { Text(stringResource(R.string.tab_canvas)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         )
-                    )
-                    NavigationBarItem(
-                        selected = phoneNavTab == 1,
-                        onClick = { phoneNavTab = 1 },
-                        icon = { Icon(Icons.Default.Description, contentDescription = stringResource(R.string.tab_notes)) },
-                        label = { Text(stringResource(R.string.tab_notes)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        NavigationBarItem(
+                            selected = currentNavTab == 1,
+                            onClick = { currentNavTab = 1 },
+                            icon = { Icon(Icons.Default.Description, contentDescription = stringResource(R.string.tab_notes)) },
+                            label = { Text(stringResource(R.string.tab_notes)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         )
-                    )
-                    NavigationBarItem(
-                        selected = phoneNavTab == 2,
-                        onClick = { phoneNavTab = 2 },
-                        icon = { Icon(Icons.Default.Checklist, contentDescription = stringResource(R.string.tab_todos)) },
-                        label = { Text(stringResource(R.string.tab_todos)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        NavigationBarItem(
+                            selected = currentNavTab == 2,
+                            onClick = { currentNavTab = 2 },
+                            icon = { Icon(Icons.Default.Checklist, contentDescription = stringResource(R.string.tab_todos)) },
+                            label = { Text(stringResource(R.string.tab_todos)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         )
-                    )
-                    NavigationBarItem(
-                        selected = phoneNavTab == 3,
-                        onClick = { phoneNavTab = 3 },
-                        icon = { Icon(Icons.Default.CalendarMonth, contentDescription = stringResource(R.string.tab_calendar)) },
-                        label = { Text(stringResource(R.string.tab_calendar)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        NavigationBarItem(
+                            selected = currentNavTab == 3,
+                            onClick = { currentNavTab = 3 },
+                            icon = { Icon(Icons.Default.CalendarMonth, contentDescription = stringResource(R.string.tab_calendar)) },
+                            label = { Text(stringResource(R.string.tab_calendar)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         )
-                    )
+                    }
                 }
             }
         }

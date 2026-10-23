@@ -104,4 +104,6 @@
     <string name="no_handwriting_available">Pro tuto poznámku nebyl nalezen žádný rukopis.</string>
     <string name="share_handwritten_note">Sdílet ručně psanou poznámku</string>
     <string name="share_text_note">Sdílet textovou poznámku</string>
+    <string name="reference_panel">Referenční panel</string>
+    <string name="toggle_reference_panel">Přepnout referenční panel</string>
 </resources>
