@@ -6,8 +6,12 @@ import com.google.gson.reflect.TypeToken
 import com.inkaction.app.data.model.EncryptedCloudNote
 import com.inkaction.app.data.model.SavedNote
 import com.inkaction.app.ui.canvas.InkStroke
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
+import java.util.zip.GZIPInputStream
+import java.util.zip.GZIPOutputStream
 import javax.crypto.Cipher
 import javax.crypto.SecretKey
 import javax.crypto.SecretKeyFactory
@@ -34,6 +38,20 @@ object CryptoManager {
     private val secureRandom = SecureRandom()
     private val gson = Gson()
 
+    fun compressGzip(data: ByteArray): ByteArray {
+        val bos = ByteArrayOutputStream()
+        GZIPOutputStream(bos).use { it.write(data) }
+        return bos.toByteArray()
+    }
+
+    fun decompressGzip(data: ByteArray): ByteArray {
+        if (data.size >= 2 && data[0] == 0x1f.toByte() && data[1] == 0x8b.toByte()) {
+            val bis = ByteArrayInputStream(data)
+            return GZIPInputStream(bis).use { it.readBytes() }
+        }
+        return data
+    }
+
     /**
      * Derives a 256-bit AES key from a user passphrase / PIN using PBKDF2 HMAC-SHA256.
      */
@@ -45,9 +63,9 @@ object CryptoManager {
     }
 
     /**
-     * Encrypts plaintext using AES-256-GCM.
+     * Encrypts plaintext using AES-256-GCM with optional GZIP compression.
      */
-    fun encrypt(plaintext: String, key: SecretKey): EncryptedPayload {
+    fun encrypt(plaintext: String, key: SecretKey, compress: Boolean = true): EncryptedPayload {
         val iv = ByteArray(IV_SIZE_BYTES)
         secureRandom.nextBytes(iv)
 
@@ -55,7 +73,9 @@ object CryptoManager {
         val spec = GCMParameterSpec(TAG_SIZE_BITS, iv)
         cipher.init(Cipher.ENCRYPT_MODE, key, spec)
 
-        val cipherBytes = cipher.doFinal(plaintext.toByteArray(StandardCharsets.UTF_8))
+        val rawBytes = plaintext.toByteArray(StandardCharsets.UTF_8)
+        val dataToEncrypt = if (compress) compressGzip(rawBytes) else rawBytes
+        val cipherBytes = cipher.doFinal(dataToEncrypt)
 
         // In standard Java AES/GCM, cipherBytes contains [encrypted text + 16-byte authentication tag]
         val ciphertextBase64 = Base64.encodeToString(cipherBytes, Base64.NO_WRAP)
@@ -68,7 +88,7 @@ object CryptoManager {
     }
 
     /**
-     * Decrypts an EncryptedPayload using AES-256-GCM.
+     * Decrypts an EncryptedPayload using AES-256-GCM and decompresses GZIP if present.
      * Throws an exception if passkey is wrong or authentication tag verification fails.
      */
     fun decrypt(payload: EncryptedPayload, key: SecretKey): String {
@@ -80,7 +100,8 @@ object CryptoManager {
         cipher.init(Cipher.DECRYPT_MODE, key, spec)
 
         val decryptedBytes = cipher.doFinal(cipherBytes)
-        return String(decryptedBytes, StandardCharsets.UTF_8)
+        val decompressedBytes = decompressGzip(decryptedBytes)
+        return String(decompressedBytes, StandardCharsets.UTF_8)
     }
 
     /**

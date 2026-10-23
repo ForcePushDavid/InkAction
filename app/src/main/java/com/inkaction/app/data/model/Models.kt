@@ -47,5 +47,6 @@ data class EncryptedCloudNote(
     val hasStrokes: Boolean = false,
     val strokesCiphertext: String = "",
     val strokesIv: String = "",
-    val isArchived: Boolean = false
+    val isArchived: Boolean = false,
+    val strokeChunkCount: Int = 0
 )

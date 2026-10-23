@@ -239,9 +239,29 @@ class CloudSyncManager(
                     userId = userId
                 )
 
-                userNotesCollection.document(encryptedNote.id)
-                    .set(encryptedNote, SetOptions.merge())
-                    .await()
+                val strokesPayload = encryptedNote.strokesCiphertext
+                if (strokesPayload.length > 600_000) {
+                    val chunkSize = 500_000
+                    val chunks = strokesPayload.chunked(chunkSize)
+                    val noteWithChunks = encryptedNote.copy(
+                        strokesCiphertext = "",
+                        strokeChunkCount = chunks.size
+                    )
+                    userNotesCollection.document(encryptedNote.id)
+                        .set(noteWithChunks, SetOptions.merge())
+                        .await()
+
+                    val chunksCol = userNotesCollection.document(encryptedNote.id).collection("stroke_chunks")
+                    chunks.forEachIndexed { idx, chunk ->
+                        chunksCol.document(idx.toString())
+                            .set(mapOf("index" to idx, "data" to chunk))
+                            .await()
+                    }
+                } else {
+                    userNotesCollection.document(encryptedNote.id)
+                        .set(encryptedNote, SetOptions.merge())
+                        .await()
+                }
                 pushedCount++
             }
 
@@ -259,8 +279,22 @@ class CloudSyncManager(
                 // If local note doesn't exist or cloud version is strictly newer:
                 if (existingLocal == null || cloudNote.updatedAt > existingLocal.timestamp) {
                     try {
+                        val fullCloudNote = if (cloudNote.strokeChunkCount > 0) {
+                            val chunksSnapshot = userNotesCollection.document(cloudNote.id)
+                                .collection("stroke_chunks")
+                                .get()
+                                .await()
+                            val reassembled = chunksSnapshot.documents
+                                .sortedBy { it.getLong("index") ?: 0L }
+                                .mapNotNull { it.getString("data") }
+                                .joinToString("")
+                            cloudNote.copy(strokesCiphertext = reassembled)
+                        } else {
+                            cloudNote
+                        }
+
                         val (decryptedNote, decryptedStrokes) = CryptoManager.decryptNote(
-                            cloudNote = cloudNote,
+                            cloudNote = fullCloudNote,
                             passphrase = passphrase
                         )
 
