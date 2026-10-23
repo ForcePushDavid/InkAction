@@ -73,6 +73,16 @@ fun MainWorkspaceScreen(
         }
     }
 
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is com.inkaction.app.viewmodel.UiEvent.ShowSnackbar -> {
+                    android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     val autoPushState by viewModel.autoPushState.collectAsState()
     val currentTool by viewModel.currentTool.collectAsState()
     val currentColor by viewModel.currentColor.collectAsState()

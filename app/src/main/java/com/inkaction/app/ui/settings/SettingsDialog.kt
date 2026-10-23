@@ -745,6 +745,35 @@ fun SettingsDialog(
                                 }
                             }
                         }
+
+                        if (syncState is SyncState.Error) {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
+                            ) {
+                                Text(
+                                    text = (syncState as SyncState.Error).message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                )
+                            }
+                        } else if (syncState is SyncState.Success && (syncState as SyncState.Success).message.isNotBlank()) {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                            ) {
+                                Text(
+                                    text = (syncState as SyncState.Success).message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
                     }
                 }
 

@@ -229,6 +229,7 @@ class CloudSyncManager(
 
             // 1. PUSH: Fetch local notes and encrypt those needing sync
             val localNotes = noteRepository.notesFlow.value
+            var pushedCount = 0
             for (localNote in localNotes) {
                 val strokes = noteRepository.loadStrokes(localNote.id)
                 val encryptedNote = CryptoManager.encryptNote(
@@ -241,12 +242,14 @@ class CloudSyncManager(
                 userNotesCollection.document(encryptedNote.id)
                     .set(encryptedNote, SetOptions.merge())
                     .await()
+                pushedCount++
             }
 
             // 2. PULL: Fetch encrypted notes from cloud and decrypt
             val snapshot = userNotesCollection.get().await()
             val localNotesMap = localNotes.associateBy { it.id }.toMutableMap()
 
+            var pulledCount = 0
             var decryptionErrors = 0
             for (doc in snapshot.documents) {
                 val cloudNote = doc.toObject(EncryptedCloudNote::class.java) ?: continue
@@ -261,24 +264,11 @@ class CloudSyncManager(
                             passphrase = passphrase
                         )
 
-                        if (existingLocal == null) {
-                            noteRepository.saveNote(
-                                title = decryptedNote.title,
-                                summary = decryptedNote.summary,
-                                markdown = decryptedNote.markdown,
-                                tags = decryptedNote.tags,
-                                strokes = decryptedStrokes ?: emptyList()
-                            )
-                        } else {
-                            noteRepository.updateNote(
-                                noteId = noteId,
-                                title = decryptedNote.title,
-                                summary = decryptedNote.summary,
-                                markdown = decryptedNote.markdown,
-                                tags = decryptedNote.tags,
-                                strokes = decryptedStrokes ?: emptyList()
-                            )
-                        }
+                        noteRepository.upsertSyncedNote(
+                            note = decryptedNote,
+                            strokes = decryptedStrokes
+                        )
+                        pulledCount++
                     } catch (e: Exception) {
                         decryptionErrors++
                         e.printStackTrace()
@@ -290,9 +280,11 @@ class CloudSyncManager(
             settingsRepository.setLastSyncTimestamp(syncTime)
 
             val successMsg = if (decryptionErrors > 0) {
-                "Synchronizováno, ale $decryptionErrors poznámek se nepodařilo dešifrovat (zkontrolujte Passphrase)."
+                "Synchronizováno ($decryptionErrors poznámek se nepodařilo dešifrovat - zkontrolujte Passphrase)."
+            } else if (pulledCount > 0 || pushedCount > 0) {
+                "Synchronizováno: staženo $pulledCount, odesláno $pushedCount poznámek."
             } else {
-                "Synchronizace úspěšně dokončena"
+                "Synchronizace dokončena (vše aktuální, v cloudu ${snapshot.size()} poznámek)."
             }
 
             val successState = SyncState.Success(syncTime, successMsg)

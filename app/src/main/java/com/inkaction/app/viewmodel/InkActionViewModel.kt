@@ -164,6 +164,12 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
             result.onSuccess {
                 _uiEvent.send(UiEvent.ShowSnackbar("Přihlášen přes Google: ${it.email}"))
                 onResult(true, null)
+                val pass = settingsRepository.settings.value.syncPassphrase
+                if (pass.isNotBlank()) {
+                    syncNow(pass, enabled = true)
+                } else {
+                    _uiEvent.send(UiEvent.ShowSnackbar("Pro synchronizaci zadejte níže šifrovací Passphrase."))
+                }
             }.onFailure {
                 onResult(false, it.localizedMessage ?: "Chyba přihlášení přes Google")
             }

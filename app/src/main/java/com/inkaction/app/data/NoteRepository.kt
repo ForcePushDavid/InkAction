@@ -182,6 +182,20 @@ class NoteRepository(private val context: Context) {
         saveStrokes(noteId, strokes)
     }
 
+    suspend fun upsertSyncedNote(note: SavedNote, strokes: List<InkStroke>?) = withContext(Dispatchers.IO) {
+        updateNotes { list ->
+            val index = list.indexOfFirst { it.id == note.id }
+            if (index != -1) {
+                list[index] = note
+            } else {
+                list.add(0, note)
+            }
+        }
+        if (strokes != null) {
+            saveStrokes(note.id, strokes)
+        }
+    }
+
     suspend fun saveTodos(newTodos: List<SavedTodo>) {
         updateTodos { it.addAll(0, newTodos) }
     }
