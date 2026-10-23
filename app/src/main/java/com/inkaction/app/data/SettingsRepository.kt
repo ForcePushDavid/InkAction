@@ -34,7 +34,7 @@ class SettingsRepository(context: Context) {
         return AppSettings(
             apiKey = prefs.getString("api_key", "") ?: "",
             modelName = prefs.getString("model_name", "gemini-3.8-flash") ?: "gemini-3.8-flash",
-            debounceDurationMs = 600000L, // Fixed to 10 mins as per earlier implementation
+            debounceDurationMs = prefs.getLong("debounce_ms", 6000L), // Default to 6 seconds for responsive auto-actionize
             remindersEnabled = prefs.getBoolean("reminders_enabled", false),
             noteLanguage = prefs.getString("note_language", "Auto-detect") ?: "Auto-detect",
             themeMode = prefs.getString("theme_mode", "system") ?: "system",
@@ -91,6 +91,11 @@ class SettingsRepository(context: Context) {
         _settings.value = _settings.value.copy(lastSyncTimestamp = timestamp)
     }
 
+    fun setDebounceDurationMs(durationMs: Long) {
+        prefs.edit().putLong("debounce_ms", durationMs).apply()
+        _settings.value = _settings.value.copy(debounceDurationMs = durationMs)
+    }
+
     fun saveSettings(
         apiKey: String,
         modelName: String,
@@ -99,12 +104,13 @@ class SettingsRepository(context: Context) {
         themeMode: String,
         defaultEventTime: String,
         cloudSyncEnabled: Boolean = false,
-        syncPassphrase: String = ""
+        syncPassphrase: String = "",
+        debounceDurationMs: Long = _settings.value.debounceDurationMs
     ) {
         prefs.edit()
             .putString("api_key", apiKey)
             .putString("model_name", modelName)
-            .putLong("debounce_ms", 600000L)
+            .putLong("debounce_ms", debounceDurationMs)
             .putBoolean("reminders_enabled", remindersEnabled)
             .putString("note_language", noteLanguage)
             .putString("theme_mode", themeMode)

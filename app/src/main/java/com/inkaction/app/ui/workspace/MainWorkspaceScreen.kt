@@ -126,6 +126,7 @@ fun MainWorkspaceScreen(
             initialDefaultEventTime = appSettings.defaultEventTime,
             initialCloudSyncEnabled = appSettings.cloudSyncEnabled,
             initialSyncPassphrase = appSettings.syncPassphrase,
+            initialDebounceDurationMs = appSettings.debounceDurationMs,
             initialFirebaseProjectId = appSettings.firebaseProjectId,
             initialFirebaseApiKey = appSettings.firebaseApiKey,
             lastSyncTimestamp = appSettings.lastSyncTimestamp,
@@ -138,8 +139,8 @@ fun MainWorkspaceScreen(
             onSaveFirebaseConfig = { projectId, apiKey -> viewModel.setFirebaseConfig(projectId, apiKey) },
             onSyncNow = { pass, enabled -> viewModel.syncNow(pass, enabled) },
             onDismiss = { showSettings = false },
-            onSave = { key, model, reminders, language, themeMode, defaultTime, cloudSync, pass ->
-                viewModel.saveSettings(key, model, reminders, language, themeMode, defaultTime, cloudSync, pass)
+            onSave = { key, model, reminders, language, themeMode, defaultTime, cloudSync, pass, debounceMs ->
+                viewModel.saveSettings(key, model, reminders, language, themeMode, defaultTime, cloudSync, pass, debounceMs)
                 showSettings = false
             },
             onExportBackup = {
@@ -163,11 +164,32 @@ fun MainWorkspaceScreen(
     }
 
     LaunchedEffect(Unit) {
+        viewModel.triggerAutoSync(delayMs = 1500L)
         if (com.inkaction.app.BuildConfig.ENABLE_IN_APP_UPDATER) {
             val update = com.inkaction.app.util.UpdateManager.checkForUpdate(com.inkaction.app.BuildConfig.VERSION_NAME)
             if (update != null) {
                 showUpdateDialog = true
             }
+        }
+    }
+
+    LaunchedEffect(currentNavTab) {
+        // Automatically sync when viewing Notes or Todos
+        if (currentNavTab == 1 || currentNavTab == 2) {
+            viewModel.triggerAutoSync(delayMs = 300L)
+        }
+    }
+
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.triggerAutoSync(delayMs = 800L)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -338,6 +360,36 @@ fun MainWorkspaceScreen(
                                     contentDescription = stringResource(R.string.toggle_reference_panel),
                                     tint = if (isTabletReferencePanelOpen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                            }
+                        }
+
+                        if (appSettings.cloudSyncEnabled) {
+                            IconButton(
+                                onClick = { viewModel.syncWithCloud() }
+                            ) {
+                                when (syncState) {
+                                    is com.inkaction.app.data.sync.SyncState.Syncing -> {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    is com.inkaction.app.data.sync.SyncState.Error -> {
+                                        Icon(
+                                            imageVector = Icons.Default.SyncProblem,
+                                            contentDescription = "Chyba synchronizace",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                    else -> {
+                                        Icon(
+                                            imageVector = Icons.Default.Sync,
+                                            contentDescription = "Synchronizovat nyní",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
                             }
                         }
 
@@ -802,7 +854,12 @@ fun CanvasPaneContent(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = stringResource(R.string.actionize), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    val actionizeLabel = if (autoPushState.isArmed && autoPushState.remainingSeconds > 0) {
+                        "Actionize (${autoPushState.remainingSeconds}s)"
+                    } else {
+                        stringResource(R.string.actionize)
+                    }
+                    Text(text = actionizeLabel, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

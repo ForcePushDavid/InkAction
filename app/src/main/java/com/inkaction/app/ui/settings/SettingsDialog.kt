@@ -98,6 +98,7 @@ fun SettingsDialog(
     initialDefaultEventTime: String,
     initialCloudSyncEnabled: Boolean = false,
     initialSyncPassphrase: String = "",
+    initialDebounceDurationMs: Long = 6000L,
     initialFirebaseProjectId: String = "",
     initialFirebaseApiKey: String = "",
     lastSyncTimestamp: Long = 0L,
@@ -118,7 +119,8 @@ fun SettingsDialog(
         themeMode: String,
         defaultEventTime: String,
         cloudSyncEnabled: Boolean,
-        syncPassphrase: String
+        syncPassphrase: String,
+        debounceDurationMs: Long
     ) -> Unit,
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit,
@@ -132,6 +134,8 @@ fun SettingsDialog(
     var defaultEventTime by remember { mutableStateOf(initialDefaultEventTime) }
     var cloudSyncEnabled by remember { mutableStateOf(initialCloudSyncEnabled) }
     var syncPassphrase by remember { mutableStateOf(initialSyncPassphrase) }
+    var debounceDurationMs by remember { mutableStateOf(initialDebounceDurationMs) }
+    var debounceExpanded by remember { mutableStateOf(false) }
 
     // Auth Form State
     var authEmail by remember { mutableStateOf("") }
@@ -875,6 +879,69 @@ fun SettingsDialog(
                             }
                         }
                     }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Automatické AI zpracování (Auto-Actionize)",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Po dokončení psaní automaticky převede kresbu na AI poznámku a úkoly.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    val debounceOptions = listOf(
+                        4000L to "4 sekundy (Rychlé)",
+                        6000L to "6 sekund (Doporučeno)",
+                        10000L to "10 sekund",
+                        20000L to "20 sekund",
+                        0L to "Pouze ručně (Vypnuto)"
+                    )
+
+                    val currentDebounceLabel = debounceOptions.find { it.first == debounceDurationMs }?.second ?: "${debounceDurationMs / 1000} s"
+
+                    ExposedDropdownMenuBox(
+                        expanded = debounceExpanded,
+                        onExpandedChange = { debounceExpanded = !debounceExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = currentDebounceLabel,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Zpoždění před spuštěním AI") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = debounceExpanded) },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = debounceExpanded,
+                            onDismissRequest = { debounceExpanded = false }
+                        ) {
+                            debounceOptions.forEach { (duration, label) ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = label,
+                                            fontWeight = if (duration == debounceDurationMs) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (duration == debounceDurationMs) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    },
+                                    onClick = {
+                                        debounceDurationMs = duration
+                                        debounceExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // -------------------------------------------------------------
@@ -1004,7 +1071,8 @@ fun SettingsDialog(
                                 themeMode,
                                 defaultEventTime,
                                 cloudSyncEnabled,
-                                syncPassphrase
+                                syncPassphrase,
+                                debounceDurationMs
                             )
                         },
                         shape = RoundedCornerShape(12.dp)

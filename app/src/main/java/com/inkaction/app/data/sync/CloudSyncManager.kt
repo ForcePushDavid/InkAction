@@ -227,47 +227,56 @@ class CloudSyncManager(
             val db = firestore ?: FirebaseFirestore.getInstance()
             val userNotesCollection = db.collection("users").document(userId).collection("notes")
 
-            // 1. PUSH: Fetch local notes and encrypt those needing sync
+            // Fetch cloud state first so we only transfer what actually changed
+            val snapshot = userNotesCollection.get().await()
+            val cloudDocsMap = snapshot.documents.associateBy { it.id }
+
+            // 1. PUSH: Only encrypt and push local notes that are new or newer than cloud
             val localNotes = noteRepository.notesFlow.value
             var pushedCount = 0
             for (localNote in localNotes) {
-                val strokes = noteRepository.loadStrokes(localNote.id)
-                val encryptedNote = CryptoManager.encryptNote(
-                    note = localNote,
-                    strokes = strokes,
-                    passphrase = passphrase,
-                    userId = userId
-                )
+                val cloudDoc = cloudDocsMap[localNote.id.toString()]
+                val cloudUpdatedAt = cloudDoc?.getLong("updatedAt") ?: 0L
 
-                val strokesPayload = encryptedNote.strokesCiphertext
-                if (strokesPayload.length > 600_000) {
-                    val chunkSize = 500_000
-                    val chunks = strokesPayload.chunked(chunkSize)
-                    val noteWithChunks = encryptedNote.copy(
-                        strokesCiphertext = "",
-                        strokeChunkCount = chunks.size
+                // If cloud does not have this note, or local note has newer edits:
+                if (cloudDoc == null || localNote.timestamp > cloudUpdatedAt) {
+                    val strokes = noteRepository.loadStrokes(localNote.id)
+                    val encryptedNote = CryptoManager.encryptNote(
+                        note = localNote,
+                        strokes = strokes,
+                        passphrase = passphrase,
+                        userId = userId
                     )
-                    userNotesCollection.document(encryptedNote.id)
-                        .set(noteWithChunks, SetOptions.merge())
-                        .await()
 
-                    val chunksCol = userNotesCollection.document(encryptedNote.id).collection("stroke_chunks")
-                    chunks.forEachIndexed { idx, chunk ->
-                        chunksCol.document(idx.toString())
-                            .set(mapOf("index" to idx, "data" to chunk))
+                    val strokesPayload = encryptedNote.strokesCiphertext
+                    if (strokesPayload.length > 600_000) {
+                        val chunkSize = 500_000
+                        val chunks = strokesPayload.chunked(chunkSize)
+                        val noteWithChunks = encryptedNote.copy(
+                            strokesCiphertext = "",
+                            strokeChunkCount = chunks.size
+                        )
+                        userNotesCollection.document(encryptedNote.id)
+                            .set(noteWithChunks, SetOptions.merge())
+                            .await()
+
+                        val chunksCol = userNotesCollection.document(encryptedNote.id).collection("stroke_chunks")
+                        chunks.forEachIndexed { idx, chunk ->
+                            chunksCol.document(idx.toString())
+                                .set(mapOf("index" to idx, "data" to chunk))
+                                .await()
+                        }
+                    } else {
+                        userNotesCollection.document(encryptedNote.id)
+                            .set(encryptedNote, SetOptions.merge())
                             .await()
                     }
-                } else {
-                    userNotesCollection.document(encryptedNote.id)
-                        .set(encryptedNote, SetOptions.merge())
-                        .await()
+                    pushedCount++
                 }
-                pushedCount++
             }
 
-            // 2. PULL: Fetch encrypted notes from cloud and decrypt
-            val snapshot = userNotesCollection.get().await()
-            val localNotesMap = localNotes.associateBy { it.id }.toMutableMap()
+            // 2. PULL: Fetch encrypted notes from cloud that are new or newer than local
+            val localNotesMap = localNotes.associateBy { it.id }
 
             var pulledCount = 0
             var decryptionErrors = 0
@@ -329,6 +338,18 @@ class CloudSyncManager(
             val errorState = SyncState.Error(e.localizedMessage ?: "Chyba při synchronizaci")
             _syncState.value = errorState
             return@withContext errorState
+        }
+    }
+
+    suspend fun deleteNoteFromCloud(noteId: Long) = withContext(Dispatchers.IO) {
+        if (!ensureFirebase()) return@withContext
+        val user = auth?.currentUser ?: return@withContext
+        try {
+            val db = firestore ?: FirebaseFirestore.getInstance()
+            val userNotesCollection = db.collection("users").document(user.uid).collection("notes")
+            userNotesCollection.document(noteId.toString()).delete().await()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }

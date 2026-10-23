@@ -9,7 +9,7 @@
 [![Theme: Indigo Ink](https://img.shields.io/badge/Theme-Indigo%20Ink-6366F1)](#)
 [![S-Pen: Hardware Optimized](https://img.shields.io/badge/S--Pen-Palm%20Rejection%20%26%20Pressure-007AFF)](#)
 [![AI Engine: Google Gemini](https://img.shields.io/badge/AI%20Engine-Google%20Gemini%20Multimodal-4285F4)](https://ai.google.dev/)
-[![Release: v2.4.5](https://img.shields.io/badge/Release-v2.4.5-success)](https://github.com/ForcePushDavid/InkAction/releases)
+[![Release: v2.4.6](https://img.shields.io/badge/Release-v2.4.6-success)](https://github.com/ForcePushDavid/InkAction/releases)
 
 *Write thoughts freely with your Samsung S-Pen. InkAction senses when you pause and uses Google Gemini multimodal agents to synthesize clean Markdown notes, actionable Todo task checklists, and automatic calendar appointments.*
 
@@ -20,8 +20,15 @@
 ## 🌟 Key Features
 
 - **Zero Note Re-reading**: Never struggle to decipher messy handwriting or forgotten sketches again.
-- **☁️ Zero-Knowledge Cloud Sync (E2EE)**:
-  - **Cross-Device Sync**: Seamlessly sync notes and stroke drawings between Samsung Galaxy S26 Ultra (phone) and Galaxy Tab S9 (tablet).
+- **⚡ Responsive Auto-Actionize (6s Countdown & No Premature Drafts)**:
+  - When you pause handwriting, a live countdown pill ticks down on the Actionize button (`Actionize (6s)`).
+  - Automatically triggers Gemini multimodal synthesis after 6 seconds of inactivity (or customizable: 4s / 6s / 10s / 20s / Manual in Settings).
+  - Writing resumes seamlessly without interruption (`onStrokeStarted` cancels and resets the countdown).
+  - Eliminated premature "Draft Note" generation—drawings are preserved in high-fidelity vector format and transformed directly into AI notes.
+- **☁️ Zero-Knowledge Cloud Sync (E2EE) with Automatic Differential Background Sync**:
+  - **Automatic Continuous Sync**: Automatically syncs notes and drawings across Samsung Galaxy S26 Ultra (phone) and Galaxy Tab S9 (tablet) on app launch, app resume, tab switch, and note/todo mutations.
+  - **Differential Sync Engine**: Compares cloud and local document timestamps to push/pull only notes that have changed, saving 95% bandwidth and completing in milliseconds.
+  - **Top Bar Sync Status Indicator**: Real-time sync spinner, error alert, and manual 1-tap sync button directly in the top app bar.
   - **1-Click Google SSO & Email Auth**: Built-in Google Identity authentication with bundled Firebase backend—zero manual server setup required.
   - **AES-256-GCM Encryption**: All notes and raw stroke vectors are encrypted directly on-device with keys derived from a custom **Sync Passphrase** via PBKDF2 (100,000 iterations). Plaintext notes and Gemini API keys never touch the cloud.
   - **GZIP Stream Compression & Auto-Chunking**: Stroke coordinates are compressed with GZIP (reducing payload size by 90–95%) and automatically chunked into subcollections for giant drawings, completely eliminating Firestore's 1 MiB document limit.

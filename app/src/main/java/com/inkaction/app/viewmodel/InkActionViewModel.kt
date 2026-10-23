@@ -26,6 +26,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 
 data class AutoPushUiState(
@@ -188,6 +191,8 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         cloudSyncManager.ensureFirebase()
     }
 
+    fun syncWithCloud() = syncNow()
+
     fun syncNow(passphrase: String? = null, enabled: Boolean = true) {
         viewModelScope.launch {
             if (enabled && !settings.value.cloudSyncEnabled) {
@@ -212,6 +217,25 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    private var autoSyncJob: Job? = null
+
+    fun triggerAutoSync(delayMs: Long = 1000L) {
+        val s = settings.value
+        if (!s.cloudSyncEnabled || s.syncPassphrase.isBlank()) {
+            return
+        }
+
+        autoSyncJob?.cancel()
+        autoSyncJob = viewModelScope.launch {
+            if (delayMs > 0) {
+                delay(delayMs)
+            }
+            if (cloudSyncManager.syncState.value !is com.inkaction.app.data.sync.SyncState.Syncing) {
+                cloudSyncManager.syncNow()
+            }
+        }
+    }
+
     fun saveSettings(
         apiKey: String,
         modelName: String,
@@ -220,7 +244,8 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         themeMode: String,
         defaultEventTime: String,
         cloudSyncEnabled: Boolean = settings.value.cloudSyncEnabled,
-        syncPassphrase: String = settings.value.syncPassphrase
+        syncPassphrase: String = settings.value.syncPassphrase,
+        debounceDurationMs: Long = settings.value.debounceDurationMs
     ) {
         settingsRepository.saveSettings(
             apiKey = apiKey,
@@ -230,9 +255,13 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
             themeMode = themeMode,
             defaultEventTime = defaultEventTime,
             cloudSyncEnabled = cloudSyncEnabled,
-            syncPassphrase = syncPassphrase
+            syncPassphrase = syncPassphrase,
+            debounceDurationMs = debounceDurationMs
         )
         cloudSyncManager.updateSyncStateBasedOnSettings()
+        if (cloudSyncEnabled && syncPassphrase.isNotBlank()) {
+            triggerAutoSync(delayMs = 500L)
+        }
     }
 
     fun setTool(tool: ToolType) {
@@ -250,15 +279,26 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     fun onStrokeFinished(strokeCount: Int, getOcrBitmaps: () -> List<Bitmap>) {
         if (strokeCount <= 0 || settings.value.debounceDurationMs <= 0 || _autoPushState.value.isProcessing) {
             cancelCountdown()
+            // If auto-actionize is disabled, but we are editing an existing note, quietly persist strokes
+            if (currentNoteId != null) {
+                autoSaveJob?.cancel()
+                autoSaveJob = viewModelScope.launch {
+                    delay(1500)
+                    noteRepository.saveStrokes(currentNoteId!!, currentStrokes.toList())
+                }
+            }
             return
         }
 
         startCountdown(getOcrBitmaps)
         
-        autoSaveJob?.cancel()
-        autoSaveJob = viewModelScope.launch {
-            delay(1500)
-            saveCurrentNoteManually()
+        // Quietly persist strokes for an already-existing note so they are not lost on exit
+        if (currentNoteId != null) {
+            autoSaveJob?.cancel()
+            autoSaveJob = viewModelScope.launch {
+                delay(2000)
+                noteRepository.saveStrokes(currentNoteId!!, currentStrokes.toList())
+            }
         }
     }
 
@@ -288,7 +328,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                 )
             }
 
-            triggerActionize(getOcrBitmaps())
+            triggerActionize(getOcrBitmaps(), currentStrokes.toList())
         }
     }
 
@@ -298,6 +338,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
 
         _autoPushState.value = AutoPushUiState(isProcessing = true)
 
+        val finalStrokes = if (strokes.isNotEmpty()) strokes else currentStrokes.toList()
         val currentSettings = settings.value
         val existingTodosStr = allTodos.value.filter { !it.isCompleted }.joinToString(", ") { it.text }
         val existingEventsStr = events.value.joinToString(", ") { "${it.title} on ${it.date}" }
@@ -332,7 +373,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                                         summary = note.summary,
                                         markdown = note.markdown,
                                         tags = note.tags,
-                                        strokes = strokes
+                                        strokes = finalStrokes
                                     )
                                 } else {
                                     currentNoteId = noteRepository.saveNote(
@@ -340,7 +381,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                                         summary = note.summary,
                                         markdown = note.markdown,
                                         tags = note.tags,
-                                        strokes = strokes
+                                        strokes = finalStrokes
                                     )
                                 }
                             }
@@ -361,6 +402,9 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                                 }
                             )
                         }
+
+                        // Seamlessly sync newly generated AI note to cloud
+                        triggerAutoSync(delayMs = 500L)
                     }
                     is AgentPipelineStatus.Error -> {
                         _autoPushState.value = AutoPushUiState(isProcessing = false)
@@ -417,6 +461,8 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     fun deleteNotePermanently(noteId: Long) {
         viewModelScope.launch {
             noteRepository.deleteNotePermanently(noteId)
+            cloudSyncManager.deleteNoteFromCloud(noteId)
+            triggerAutoSync(delayMs = 500L)
         }
     }
 
@@ -424,6 +470,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             noteRepository.archiveNote(noteId, true)
             _uiEvent.send(UiEvent.ShowSnackbar("Note archived"))
+            triggerAutoSync(delayMs = 500L)
         }
     }
 
@@ -431,12 +478,14 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             noteRepository.archiveNote(noteId, false)
             _uiEvent.send(UiEvent.ShowSnackbar("Note unarchived"))
+            triggerAutoSync(delayMs = 500L)
         }
     }
 
     fun toggleNotePin(noteId: Long) {
         viewModelScope.launch {
             noteRepository.toggleNotePin(noteId)
+            triggerAutoSync(delayMs = 500L)
         }
     }
 
@@ -449,6 +498,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     fun moveNoteToFolder(noteId: Long, folderId: Long?) {
         viewModelScope.launch {
             noteRepository.updateNoteFolder(noteId, folderId)
+            triggerAutoSync(delayMs = 500L)
         }
     }
 
@@ -463,6 +513,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
                 val enhancedText = geminiEngine.enhanceNoteContent(note.summary, note.markdown, settings.value.noteLanguage)
                 if (enhancedText != null) {
                     noteRepository.updateNoteEnhancement(noteId, enhancedText)
+                    triggerAutoSync(delayMs = 500L)
                 } else {
                     _uiEvent.send(UiEvent.ShowSnackbar("Failed to enhance note"))
                 }
@@ -503,21 +554,23 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
             if (currentNoteId != null) {
                 noteRepository.updateNote(
                     noteId = currentNoteId!!,
-                    title = _currentNote.value?.title ?: "Draft",
+                    title = _currentNote.value?.title ?: "Poznámka",
                     summary = _currentNote.value?.summary ?: "",
                     markdown = _currentNote.value?.markdown ?: "",
                     tags = _currentNote.value?.tags ?: emptyList(),
                     strokes = currentStrokes.toList()
                 )
             } else {
+                val formattedTime = SimpleDateFormat("d. M. yyyy HH:mm", Locale.getDefault()).format(Date())
                 currentNoteId = noteRepository.saveNote(
-                    title = "Draft Note",
-                    summary = "Manually saved without AI.",
+                    title = "Poznámka $formattedTime",
+                    summary = "Ručně uložená poznámka",
                     markdown = "",
                     tags = emptyList(),
                     strokes = currentStrokes.toList()
                 )
             }
+            triggerAutoSync(delayMs = 500L)
         }
     }
 
