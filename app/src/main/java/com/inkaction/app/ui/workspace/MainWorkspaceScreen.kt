@@ -1,6 +1,9 @@
 package com.inkaction.app.ui.workspace
 
 import android.graphics.Color as AndroidColor
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,6 +14,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -18,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -617,6 +624,7 @@ fun CanvasPaneContent(
     var canvasViewRef by remember { mutableStateOf<InkCanvasView?>(null) }
     val scrollState = androidx.compose.foundation.rememberScrollState()
     val appSettings by viewModel.settings.collectAsState()
+    val currentStrokeWidth by viewModel.currentStrokeWidth.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
         val systemDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
@@ -629,6 +637,7 @@ fun CanvasPaneContent(
                 factory = { context ->
                     InkCanvasView(context).apply {
                         this.loadStrokes(viewModel.currentStrokes)
+                        this.currentSize = currentStrokeWidth
                         this.onStrokeStarted = { viewModel.onStrokeStarted() }
                         this.onStrokeFinished = { count ->
                             viewModel.currentStrokes.clear()
@@ -659,6 +668,7 @@ fun CanvasPaneContent(
                     view.isDarkMode = isDark
                     view.currentTool = currentTool
                     view.currentColor = currentColor
+                    view.currentSize = currentStrokeWidth
                     view.isFingerDrawingEnabled = appSettings.fingerDrawingEnabled
                     view.setTemplate(viewModel.canvasTemplate)
                 }
@@ -668,10 +678,17 @@ fun CanvasPaneContent(
         FloatingToolbar(
             currentTool = currentTool,
             currentColor = currentColor,
+            currentStrokeWidth = currentStrokeWidth,
             isFingerDrawingEnabled = appSettings.fingerDrawingEnabled,
             onToggleFingerDrawing = { viewModel.toggleFingerDrawing() },
             onSelectTool = { viewModel.setTool(it) },
-            onSelectColor = { viewModel.setColor(it) },
+            onSelectColor = { colorInt ->
+                viewModel.setColor(colorInt)
+                if (currentTool != ToolType.PEN && currentTool != ToolType.HIGHLIGHTER) {
+                    viewModel.setTool(ToolType.PEN)
+                }
+            },
+            onCycleStrokeWidth = { viewModel.cycleStrokeWidth() },
             onUndo = { canvasViewRef?.undo() },
             onRedo = { canvasViewRef?.redo() },
             onClear = { canvasViewRef?.clearCanvas() },
@@ -777,15 +794,18 @@ fun CanvasPaneContent(
 fun FloatingToolbar(
     currentTool: ToolType,
     currentColor: Int,
+    currentStrokeWidth: Float,
     isFingerDrawingEnabled: Boolean,
     onToggleFingerDrawing: () -> Unit,
     onSelectTool: (ToolType) -> Unit,
     onSelectColor: (Int) -> Unit,
+    onCycleStrokeWidth: () -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptics = LocalHapticFeedback.current
     val colors = listOf(
         AndroidColor.parseColor("#F0F6FC"),
         AndroidColor.parseColor("#58A6FF"),
@@ -793,6 +813,27 @@ fun FloatingToolbar(
         AndroidColor.parseColor("#D29922"),
         AndroidColor.parseColor("#F85149"),
         AndroidColor.parseColor("#BC8CFF")
+    )
+
+    // Dynamic dot diameter corresponding to the 4 stroke widths:
+    // 2.5f -> 8.dp (Extra Fine)
+    // 4.0f -> 12.dp (Fine / Normal)
+    // 6.5f -> 17.dp (Medium)
+    // 10.0f -> 23.dp (Thick / Bold)
+    val targetDotSize = when {
+        currentStrokeWidth <= 3.0f -> 8.dp
+        currentStrokeWidth <= 5.0f -> 12.dp
+        currentStrokeWidth <= 8.0f -> 17.dp
+        else -> 23.dp
+    }
+
+    val animatedDotSize by animateDpAsState(
+        targetValue = targetDotSize,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "penDotSize"
     )
 
     Row(
@@ -850,28 +891,64 @@ fun FloatingToolbar(
 
         Spacer(modifier = Modifier.width(4.dp))
 
+        // Color bullets with tap-to-cycle stroke width!
         colors.forEach { colorInt ->
+            val isSelected = currentColor == colorInt
+
             Box(
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(32.dp)
                     .clip(CircleShape)
-                    .background(Color(colorInt))
-                    .border(
-                        width = if (currentColor == colorInt) 2.dp else 0.dp,
-                        color = if (currentColor == colorInt) MaterialTheme.colorScheme.primary else Color.Transparent,
-                        shape = CircleShape
+                    .clickable {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (isSelected) {
+                            // Already selected -> tap cycles stroke width! The bullet grows and shrinks!
+                            onCycleStrokeWidth()
+                        } else {
+                            // Select this color
+                            onSelectColor(colorInt)
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                // Outer ring for selected color
+                if (isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .border(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = CircleShape
+                            )
                     )
-                    .clickable { onSelectColor(colorInt) }
-            )
+                }
+
+                // Inner color bullet: dynamically sized when selected, fixed clean dot when unselected
+                Box(
+                    modifier = Modifier
+                        .size(if (isSelected) animatedDotSize else 15.dp)
+                        .clip(CircleShape)
+                        .background(Color(colorInt))
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(4.dp))
 
         IconButton(onClick = onUndo, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Default.Undo, contentDescription = stringResource(R.string.undo), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Undo,
+                contentDescription = stringResource(R.string.undo),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         IconButton(onClick = onRedo, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Default.Redo, contentDescription = stringResource(R.string.redo), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Redo,
+                contentDescription = stringResource(R.string.redo),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

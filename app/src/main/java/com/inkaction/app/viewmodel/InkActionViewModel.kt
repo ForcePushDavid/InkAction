@@ -59,6 +59,26 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     private val _currentColor = MutableStateFlow(android.graphics.Color.parseColor("#F0F6FC"))
     val currentColor: StateFlow<Int> = _currentColor.asStateFlow()
 
+    val penStrokeWidths = listOf(2.5f, 4.0f, 6.5f, 10.0f)
+
+    private val _currentStrokeWidth = MutableStateFlow(settings.value.penStrokeWidth)
+    val currentStrokeWidth: StateFlow<Float> = _currentStrokeWidth.asStateFlow()
+
+    fun cycleStrokeWidth(): Float {
+        val current = _currentStrokeWidth.value
+        val currentIndex = penStrokeWidths.indexOfFirst { kotlin.math.abs(it - current) < 0.3f }
+        val nextIndex = if (currentIndex == -1 || currentIndex >= penStrokeWidths.size - 1) 0 else currentIndex + 1
+        val newWidth = penStrokeWidths[nextIndex]
+        _currentStrokeWidth.value = newWidth
+        settingsRepository.setPenStrokeWidth(newWidth)
+        return newWidth
+    }
+
+    fun setStrokeWidth(width: Float) {
+        _currentStrokeWidth.value = width
+        settingsRepository.setPenStrokeWidth(width)
+    }
+
     private val _autoPushState = MutableStateFlow(AutoPushUiState())
     val autoPushState: StateFlow<AutoPushUiState> = _autoPushState.asStateFlow()
 

@@ -32,7 +32,7 @@ class InkCanvasView @JvmOverloads constructor(
 
     var currentTool: ToolType = ToolType.PEN
     var currentColor: Int = Color.parseColor("#F0F6FC")
-    var currentSize: Float = 6f
+    var currentSize: Float = 3.5f
 
     var templateType: Int = 0
     fun setTemplate(type: Int) {

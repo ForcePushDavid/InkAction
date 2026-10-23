@@ -18,7 +18,8 @@ data class AppSettings(
     val cloudSyncEnabled: Boolean = false,
     val syncPassphrase: String = "",
     val syncAccountEmail: String = "",
-    val lastSyncTimestamp: Long = 0L
+    val lastSyncTimestamp: Long = 0L,
+    val penStrokeWidth: Float = 3.5f
 )
 
 class SettingsRepository(context: Context) {
@@ -40,8 +41,14 @@ class SettingsRepository(context: Context) {
             cloudSyncEnabled = prefs.getBoolean("cloud_sync_enabled", false),
             syncPassphrase = prefs.getString("sync_passphrase", "") ?: "",
             syncAccountEmail = prefs.getString("sync_account_email", "") ?: "",
-            lastSyncTimestamp = prefs.getLong("last_sync_timestamp", 0L)
+            lastSyncTimestamp = prefs.getLong("last_sync_timestamp", 0L),
+            penStrokeWidth = prefs.getFloat("pen_stroke_width", 3.5f)
         )
+    }
+
+    fun setPenStrokeWidth(width: Float) {
+        prefs.edit().putFloat("pen_stroke_width", width).apply()
+        _settings.value = _settings.value.copy(penStrokeWidth = width)
     }
 
     fun setFingerDrawingEnabled(enabled: Boolean) {
