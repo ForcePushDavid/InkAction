@@ -7,6 +7,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
+import android.graphics.Rect
+import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -36,8 +38,10 @@ class InkCanvasView @JvmOverloads constructor(
 
     var templateType: Int = 0
     fun setTemplate(type: Int) {
-        templateType = type
-        invalidate()
+        if (templateType != type) {
+            templateType = type
+            invalidate()
+        }
     }
 
     var isDarkMode: Boolean = true
@@ -72,10 +76,9 @@ class InkCanvasView @JvmOverloads constructor(
         xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
     }
 
-    init {
-        // Required for eraser PorterDuff CLEAR mode
-        setLayerType(LAYER_TYPE_HARDWARE, null)
-    }
+    private val clipRect = Rect()
+    private val clipRectF = RectF()
+    private val toRemoveStrokes = ArrayList<InkStroke>()
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val toolType = event.getToolType(0)
@@ -102,18 +105,41 @@ class InkCanvasView @JvmOverloads constructor(
             currentTool
         }
         
-        val eraserRadius = 30f
+        val eraserRadius = 35f
+        val eraserRadiusSq = eraserRadius * eraserRadius
         
         fun eraseIntersections(touchX: Float, touchY: Float): Boolean {
             var erased = false
-            val toRemove = strokes.filter { stroke ->
-                stroke.points.any { p ->
-                    Math.hypot((p.x - touchX).toDouble(), (p.y - touchY).toDouble()) < eraserRadius
+            toRemoveStrokes.clear()
+
+            val eLeft = touchX - eraserRadius
+            val eTop = touchY - eraserRadius
+            val eRight = touchX + eraserRadius
+            val eBottom = touchY + eraserRadius
+
+            for (i in 0 until strokes.size) {
+                val stroke = strokes[i]
+                val b = stroke.bounds
+                if (b.right < eLeft || b.left > eRight || b.bottom < eTop || b.top > eBottom) {
+                    continue
+                }
+                val pts = stroke.points
+                for (j in 0 until pts.size) {
+                    val p = pts[j]
+                    val dx = p.x - touchX
+                    val dy = p.y - touchY
+                    if (dx * dx + dy * dy <= eraserRadiusSq) {
+                        toRemoveStrokes.add(stroke)
+                        break
+                    }
                 }
             }
-            if (toRemove.isNotEmpty()) {
-                strokes.removeAll(toRemove.toSet())
-                toRemove.forEach { undoStack.push(it) }
+
+            if (toRemoveStrokes.isNotEmpty()) {
+                strokes.removeAll(toRemoveStrokes)
+                for (k in 0 until toRemoveStrokes.size) {
+                    undoStack.push(toRemoveStrokes[k])
+                }
                 erased = true
             }
             return erased
@@ -131,8 +157,7 @@ class InkCanvasView @JvmOverloads constructor(
                         color = currentColor,
                         baseWidth = currentSize
                     )
-                    stroke.points.add(InkPoint(x, y, pressure))
-                    stroke.buildPath()
+                    stroke.addPointIncremental(InkPoint(x, y, pressure))
                     currentStroke = stroke
                     strokes.add(stroke)
                     undoStack.clear()
@@ -154,7 +179,7 @@ class InkCanvasView @JvmOverloads constructor(
                     currentStroke?.let { stroke ->
                         val historySize = event.historySize
                         for (h in 0 until historySize) {
-                            stroke.points.add(
+                            stroke.addPointIncremental(
                                 InkPoint(
                                     event.getHistoricalX(h),
                                     event.getHistoricalY(h),
@@ -162,8 +187,7 @@ class InkCanvasView @JvmOverloads constructor(
                                 )
                             )
                         }
-                        stroke.points.add(InkPoint(x, y, pressure))
-                        stroke.buildPath()
+                        stroke.addPointIncremental(InkPoint(x, y, pressure))
                         invalidate()
                     }
                 }
@@ -176,8 +200,7 @@ class InkCanvasView @JvmOverloads constructor(
                     onStrokeFinished?.invoke(strokes.size)
                 } else {
                     currentStroke?.let { stroke ->
-                        stroke.points.add(InkPoint(x, y, pressure))
-                        stroke.buildPath()
+                        stroke.addPointIncremental(InkPoint(x, y, pressure))
                         currentStroke = null
                         invalidate()
                         onStrokeFinished?.invoke(strokes.size)
@@ -200,42 +223,74 @@ class InkCanvasView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
+        if (!canvas.getClipBounds(clipRect)) {
+            clipRect.set(0, 0, width, height)
+        }
+        clipRectF.set(clipRect)
+
         templatePaint.color = if (isDarkMode) Color.parseColor("#30363D") else Color.parseColor("#D0D7DE")
 
         if (templateType > 0) {
             when (templateType) {
-                1 -> { // Dots
+                1 -> { // Dots - viewport frustum culling
                     val spacing = 50f
-                    for (x in 0..width step spacing.toInt()) {
-                        for (y in 0..height step spacing.toInt()) {
-                            canvas.drawCircle(x.toFloat(), y.toFloat(), 2f, templatePaint)
+                    val startX = ((clipRect.left / spacing).toInt() * spacing.toInt()).coerceAtLeast(0)
+                    val endX = clipRect.right.coerceAtMost(width)
+                    val startY = ((clipRect.top / spacing).toInt() * spacing.toInt()).coerceAtLeast(0)
+                    val endY = clipRect.bottom.coerceAtMost(height)
+
+                    var cx = startX
+                    while (cx <= endX) {
+                        var cy = startY
+                        while (cy <= endY) {
+                            canvas.drawCircle(cx.toFloat(), cy.toFloat(), 2f, templatePaint)
+                            cy += spacing.toInt()
                         }
+                        cx += spacing.toInt()
                     }
                 }
-                2 -> { // Lines
+                2 -> { // Lines - viewport frustum culling
                     val spacing = 80f
                     templatePaint.style = Paint.Style.STROKE
-                    for (y in 0..height step spacing.toInt()) {
-                        canvas.drawLine(0f, y.toFloat(), width.toFloat(), y.toFloat(), templatePaint)
+                    val startY = ((clipRect.top / spacing).toInt() * spacing.toInt()).coerceAtLeast(0)
+                    val endY = clipRect.bottom.coerceAtMost(height)
+
+                    var cy = startY
+                    while (cy <= endY) {
+                        canvas.drawLine(0f, cy.toFloat(), width.toFloat(), cy.toFloat(), templatePaint)
+                        cy += spacing.toInt()
                     }
                     templatePaint.style = Paint.Style.FILL
                 }
-                3 -> { // Grid
+                3 -> { // Grid - viewport frustum culling
                     val spacing = 80f
                     templatePaint.style = Paint.Style.STROKE
-                    for (x in 0..width step spacing.toInt()) {
-                        canvas.drawLine(x.toFloat(), 0f, x.toFloat(), height.toFloat(), templatePaint)
+                    val startX = ((clipRect.left / spacing).toInt() * spacing.toInt()).coerceAtLeast(0)
+                    val endX = clipRect.right.coerceAtMost(width)
+                    val startY = ((clipRect.top / spacing).toInt() * spacing.toInt()).coerceAtLeast(0)
+                    val endY = clipRect.bottom.coerceAtMost(height)
+
+                    var cx = startX
+                    while (cx <= endX) {
+                        canvas.drawLine(cx.toFloat(), 0f, cx.toFloat(), height.toFloat(), templatePaint)
+                        cx += spacing.toInt()
                     }
-                    for (y in 0..height step spacing.toInt()) {
-                        canvas.drawLine(0f, y.toFloat(), width.toFloat(), y.toFloat(), templatePaint)
+                    var cy = startY
+                    while (cy <= endY) {
+                        canvas.drawLine(0f, cy.toFloat(), width.toFloat(), cy.toFloat(), templatePaint)
+                        cy += spacing.toInt()
                     }
                     templatePaint.style = Paint.Style.FILL
                 }
             }
         }
 
-        for (stroke in strokes) {
-            drawStroke(canvas, stroke)
+        // Viewport frustum culling: only draw strokes that intersect the visible screen clip!
+        for (i in 0 until strokes.size) {
+            val stroke = strokes[i]
+            if (RectF.intersects(stroke.bounds, clipRectF)) {
+                drawStroke(canvas, stroke)
+            }
         }
     }
 
@@ -307,9 +362,7 @@ class InkCanvasView @JvmOverloads constructor(
 
         val strokeBounds = strokes.mapNotNull { stroke ->
             if (stroke.points.isEmpty()) return@mapNotNull null
-            val minY = stroke.points.minOf { it.y }
-            val maxY = stroke.points.maxOf { it.y }
-            stroke to Pair(minY, maxY)
+            stroke to Pair(stroke.bounds.top, stroke.bounds.bottom)
         }
 
         if (strokeBounds.isEmpty()) return emptyList()

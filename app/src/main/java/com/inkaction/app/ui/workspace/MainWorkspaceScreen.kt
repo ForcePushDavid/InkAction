@@ -483,7 +483,6 @@ fun MainWorkspaceScreen(
                                             viewModel = viewModel,
                                             currentTool = currentTool,
                                             currentColor = currentColor,
-                                            autoPushState = autoPushState,
                                             onCanvasCreated = { inkCanvasRef = it }
                                         )
                                     }
@@ -581,7 +580,6 @@ fun MainWorkspaceScreen(
                                     viewModel = viewModel,
                                     currentTool = currentTool,
                                     currentColor = currentColor,
-                                    autoPushState = autoPushState,
                                     onCanvasCreated = { inkCanvasRef = it }
                                 )
                             }
@@ -689,7 +687,6 @@ fun CanvasPaneContent(
     viewModel: InkActionViewModel,
     currentTool: ToolType,
     currentColor: Int,
-    autoPushState: com.inkaction.app.viewmodel.AutoPushUiState,
     onCanvasCreated: (InkCanvasView) -> Unit
 ) {
     var canvasViewRef by remember { mutableStateOf<InkCanvasView?>(null) }
@@ -733,14 +730,14 @@ fun CanvasPaneContent(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(10000.dp),
+                    .height(6000.dp),
                 update = { view ->
                     val isDark = appSettings.themeMode == "dark" || (appSettings.themeMode == "system" && systemDarkTheme)
-                    view.isDarkMode = isDark
-                    view.currentTool = currentTool
-                    view.currentColor = currentColor
-                    view.currentSize = currentStrokeWidth
-                    view.isFingerDrawingEnabled = appSettings.fingerDrawingEnabled
+                    if (view.isDarkMode != isDark) view.isDarkMode = isDark
+                    if (view.currentTool != currentTool) view.currentTool = currentTool
+                    if (view.currentColor != currentColor) view.currentColor = currentColor
+                    if (view.currentSize != currentStrokeWidth) view.currentSize = currentStrokeWidth
+                    if (view.isFingerDrawingEnabled != appSettings.fingerDrawingEnabled) view.isFingerDrawingEnabled = appSettings.fingerDrawingEnabled
                     view.setTemplate(viewModel.canvasTemplate)
                 }
             )
@@ -768,99 +765,114 @@ fun CanvasPaneContent(
                 .padding(top = 12.dp)
         )
 
-        Row(
+        ActionizeBottomBar(
+            viewModel = viewModel,
+            getCanvasView = { canvasViewRef },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            var generateNote by remember { mutableStateOf(true) }
-            var generateTodos by remember { mutableStateOf(true) }
-            
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .clickable { generateNote = !generateNote }
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
-                    .padding(end = 12.dp)
-            ) {
-                Checkbox(
-                    checked = generateNote,
-                    onCheckedChange = { generateNote = it },
-                    colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
-                )
-                Text(
-                    stringResource(R.string.checkbox_note),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .clickable { generateTodos = !generateTodos }
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
-                    .padding(end = 12.dp)
-            ) {
-                Checkbox(
-                    checked = generateTodos,
-                    onCheckedChange = { generateTodos = it },
-                    colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
-                )
-                Text(
-                    stringResource(R.string.checkbox_todos),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            
-            Spacer(modifier = Modifier.width(12.dp))
+                .padding(16.dp)
+        )
+    }
+}
 
-            Button(
-                onClick = { 
-                    if (!autoPushState.isProcessing) {
-                        viewModel.triggerActionize(
-                            bitmaps = canvasViewRef?.createOcrBitmaps() ?: emptyList(),
-                            strokes = canvasViewRef?.strokes?.toList() ?: emptyList(),
-                            generateNote = generateNote,
-                            generateTodos = generateTodos
-                        ) 
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (autoPushState.isProcessing) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary
-                ),
-                shape = CircleShape
-            ) {
-                if (autoPushState.isProcessing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
+@Composable
+fun ActionizeBottomBar(
+    viewModel: InkActionViewModel,
+    getCanvasView: () -> InkCanvasView?,
+    modifier: Modifier = Modifier
+) {
+    val autoPushState by viewModel.autoPushState.collectAsState()
+    var generateNote by remember { mutableStateOf(true) }
+    var generateTodos by remember { mutableStateOf(true) }
+
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .clickable { generateNote = !generateNote }
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+                .padding(end = 12.dp)
+        ) {
+            Checkbox(
+                checked = generateNote,
+                onCheckedChange = { generateNote = it },
+                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+            )
+            Text(
+                stringResource(R.string.checkbox_note),
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .clickable { generateTodos = !generateTodos }
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+                .padding(end = 12.dp)
+        ) {
+            Checkbox(
+                checked = generateTodos,
+                onCheckedChange = { generateTodos = it },
+                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+            )
+            Text(
+                stringResource(R.string.checkbox_todos),
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Button(
+            onClick = {
+                if (!autoPushState.isProcessing) {
+                    val canvas = getCanvasView()
+                    viewModel.triggerActionize(
+                        bitmaps = canvas?.createOcrBitmaps() ?: emptyList(),
+                        strokes = canvas?.strokes?.toList() ?: emptyList(),
+                        generateNote = generateNote,
+                        generateTodos = generateTodos
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = stringResource(R.string.processing), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    val actionizeLabel = if (autoPushState.isArmed && autoPushState.remainingSeconds > 0) {
-                        "Actionize (${autoPushState.remainingSeconds}s)"
-                    } else {
-                        stringResource(R.string.actionize)
-                    }
-                    Text(text = actionizeLabel, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (autoPushState.isProcessing) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary
+            ),
+            shape = CircleShape
+        ) {
+            if (autoPushState.isProcessing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    color = Color.White,
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = stringResource(R.string.processing), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            } else {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                val actionizeLabel = if (autoPushState.isArmed && autoPushState.remainingSeconds > 0) {
+                    "Actionize (${autoPushState.remainingSeconds}s)"
+                } else {
+                    stringResource(R.string.actionize)
+                }
+                Text(text = actionizeLabel, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
