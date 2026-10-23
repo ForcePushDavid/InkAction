@@ -95,4 +95,13 @@ dependencies {
     
     // WorkManager
     implementation(libs.work.runtime.ktx)
+
+    // Google Firebase (Spark Free Tier) for cross-device sync
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
+}
+
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
 }

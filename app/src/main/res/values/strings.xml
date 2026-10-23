@@ -106,4 +106,40 @@
     <string name="share_text_note">Share text note</string>
     <string name="reference_panel">Reference panel</string>
     <string name="toggle_reference_panel">Toggle reference panel</string>
+
+    <!-- Cloud Sync & Privacy -->
+    <string name="section_cloud_sync">Cloud &amp; Cross-device Sync</string>
+    <string name="cloud_sync_toggle">Cloud synchronization</string>
+    <string name="cloud_sync_toggle_desc">Sync notes between phone and tablet</string>
+    <string name="cloud_sync_local_only_title">Strict Local-Only Privacy Mode</string>
+    <string name="cloud_sync_local_only_desc">All notes, strokes, and data remain strictly on this device. Cloud storage is completely disabled.</string>
+    <string name="cloud_sync_e2ee_badge">Zero-Knowledge AES-256 E2EE Active</string>
+    <string name="cloud_sync_e2ee_desc">Notes and strokes are encrypted on your device before uploading. The cloud provider cannot read your notes.</string>
+    <string name="cloud_sync_passphrase">Encryption Passkey (Sync Passphrase)</string>
+    <string name="cloud_sync_passphrase_hint">Enter identical passkey on phone and tablet</string>
+    <string name="cloud_sync_button">Sync Now</string>
+    <string name="cloud_syncing">Syncing with cloud...</string>
+    <string name="cloud_sync_last_time">Last sync: %1$s</string>
+    <string name="cloud_sync_never">Never synced</string>
+    <string name="section_ai">Artificial Intelligence (Gemini)</string>
+    <string name="api_key_security_note">Stored only in your device hardware Keystore (never uploaded)</string>
+    <string name="section_appearance">Appearance &amp; Behavior</string>
+    <string name="section_backup">Backup &amp; Updates</string>
+    <string name="notes_library_title">Notes Library</string>
+    <string name="notes_active_title">Active Note</string>
+    <string name="notes_search_hint">Search notes and #tags...</string>
+    <string name="notes_empty_title">Notes library is empty</string>
+    <string name="notes_empty_desc">Write on canvas and tap Actionize to create smart notes</string>
+    <string name="todos_empty_title">No tasks found</string>
+    <string name="todos_empty_desc">Tasks and action items from your notes will appear here</string>
+    <string name="todos_active_header">Active Tasks</string>
+    <string name="todos_completed_header">Completed</string>
+    <string name="priority_high">High</string>
+    <string name="priority_medium">Medium</string>
+    <string name="priority_low">Low</string>
+    <string name="note_status_local">Local</string>
+    <string name="note_status_synced">Synced (E2EE)</string>
+    <string name="add_folder">+ Folder</string>
+    <string name="folder_name">Folder name</string>
+    <string name="folder_create">Create</string>
 </resources>

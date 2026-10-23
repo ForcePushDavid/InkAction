@@ -106,4 +106,40 @@
     <string name="share_text_note">Tekstnotitie delen</string>
     <string name="reference_panel">Referentiepaneel</string>
     <string name="toggle_reference_panel">Referentiepaneel in-/uitschakelen</string>
+
+    <!-- Cloud Sync & Privacy -->
+    <string name="section_cloud_sync">Cloud &amp; Synchronisatie</string>
+    <string name="cloud_sync_toggle">Cloudsynchronisatie</string>
+    <string name="cloud_sync_toggle_desc">Synchroniseer notities tussen telefoon en tablet</string>
+    <string name="cloud_sync_local_only_title">Strikte offline privacy-modus</string>
+    <string name="cloud_sync_local_only_desc">Alle notities, handschrift en gegevens blijven uitsluitend op dit apparaat. Cloudopslag is volledig uitgeschakeld.</string>
+    <string name="cloud_sync_e2ee_badge">Zero-Knowledge AES-256 E2EE Actief</string>
+    <string name="cloud_sync_e2ee_desc">Notities en pennenstreken worden versleuteld op uw apparaat voordat ze worden geüpload.</string>
+    <string name="cloud_sync_passphrase">Versleutelingssleutel (Sync Passphrase)</string>
+    <string name="cloud_sync_passphrase_hint">Voer dezelfde sleutel in op telefoon en tablet</string>
+    <string name="cloud_sync_button">Nu synchroniseren</string>
+    <string name="cloud_syncing">Synchroniseren met cloud...</string>
+    <string name="cloud_sync_last_time">Laatste synchronisatie: %1$s</string>
+    <string name="cloud_sync_never">Nog niet gesynchroniseerd</string>
+    <string name="section_ai">Kunstmatige Intelligentie (Gemini)</string>
+    <string name="api_key_security_note">Alleen opgeslagen in hardware-keystore van apparaat (nooit geüpload)</string>
+    <string name="section_appearance">Uiterlijk &amp; Gedrag</string>
+    <string name="section_backup">Back-up &amp; Updates</string>
+    <string name="notes_library_title">Notitiebibliotheek</string>
+    <string name="notes_active_title">Actieve notitie</string>
+    <string name="notes_search_hint">Zoek notities en #tags...</string>
+    <string name="notes_empty_title">Notitiebibliotheek is leeg</string>
+    <string name="notes_empty_desc">Schrijf op canvas en tik op Actionize om slimme notities te maken</string>
+    <string name="todos_empty_title">Geen taken gevonden</string>
+    <string name="todos_empty_desc">Taken uit uw handgeschreven notities verschijnen hier</string>
+    <string name="todos_active_header">Actieve taken</string>
+    <string name="todos_completed_header">Voltooid</string>
+    <string name="priority_high">Hoog</string>
+    <string name="priority_medium">Gemiddeld</string>
+    <string name="priority_low">Laag</string>
+    <string name="note_status_local">Lokaal</string>
+    <string name="note_status_synced">Gesynchroniseerd (E2EE)</string>
+    <string name="add_folder">+ Map</string>
+    <string name="folder_name">Mapnaam</string>
+    <string name="folder_create">Maken</string>
 </resources>

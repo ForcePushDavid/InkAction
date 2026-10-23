@@ -5,7 +5,11 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,59 +26,73 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.Print
-import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Brush
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.ui.res.stringResource
-import com.inkaction.app.R
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.rememberSwipeToDismissBoxState
+import com.inkaction.app.R
 import com.inkaction.app.ai.NoteDto
-import com.inkaction.app.data.model.SavedNote
 import com.inkaction.app.data.model.NoteFolder
+import com.inkaction.app.data.model.SavedNote
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -93,58 +112,79 @@ fun NotesScreen(
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var selectedTag by remember { mutableStateOf<String?>(null) }
-    
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var selectedFolderId by remember { mutableStateOf<Long?>(null) }
     var newFolderName by remember { mutableStateOf("") }
     var noteToShare by remember { mutableStateOf<SavedNote?>(null) }
     val coroutineScope = rememberCoroutineScope()
-    
-    val allTags = allNotes.flatMap { it.tags }.distinct().sorted()
-    
-    val filteredNotes = allNotes.filter { savedNote ->
-        val matchesSearch = searchQuery.isBlank() || 
-            savedNote.title.contains(searchQuery, ignoreCase = true) ||
-            savedNote.summary.contains(searchQuery, ignoreCase = true) ||
-            savedNote.markdown.contains(searchQuery, ignoreCase = true) ||
-            savedNote.tags.any { it.contains(searchQuery, ignoreCase = true) }
-            
-        val matchesTag = selectedTag == null || savedNote.tags.contains(selectedTag)
-        val matchesFolder = selectedFolderId == null || savedNote.folderId == selectedFolderId
-        
-        matchesSearch && matchesTag && matchesFolder
-    }.sortedWith(compareByDescending<SavedNote> { it.isPinned }.thenByDescending { it.timestamp })
+    val haptics = LocalHapticFeedback.current
 
+    val allTags = remember(allNotes) {
+        allNotes.flatMap { it.tags }.distinct().sorted()
+    }
+
+    val filteredNotes = remember(allNotes, searchQuery, selectedTag, selectedFolderId) {
+        allNotes.filter { savedNote ->
+            val matchesSearch = searchQuery.isBlank() ||
+                savedNote.title.contains(searchQuery, ignoreCase = true) ||
+                savedNote.summary.contains(searchQuery, ignoreCase = true) ||
+                savedNote.markdown.contains(searchQuery, ignoreCase = true) ||
+                savedNote.tags.any { it.contains(searchQuery, ignoreCase = true) }
+
+            val matchesTag = selectedTag == null || savedNote.tags.contains(selectedTag)
+            val matchesFolder = selectedFolderId == null || savedNote.folderId == selectedFolderId
+
+            matchesSearch && matchesTag && matchesFolder
+        }.sortedWith(compareByDescending<SavedNote> { it.isPinned }.thenByDescending { it.timestamp })
+    }
+
+    // Dialog for creating folders
     if (showCreateFolderDialog) {
-        androidx.compose.material3.AlertDialog(
+        AlertDialog(
             onDismissRequest = { showCreateFolderDialog = false },
-            title = { Text("Nová složka") },
+            title = {
+                Text(
+                    text = stringResource(R.string.add_folder),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
                 OutlinedTextField(
                     value = newFolderName,
                     onValueChange = { newFolderName = it },
-                    label = { Text("Název složky") }
+                    label = { Text(stringResource(R.string.folder_name)) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
                 )
             },
             confirmButton = {
-                Button(onClick = {
-                    if (newFolderName.isNotBlank()) {
-                        onCreateFolder(newFolderName, "#38BDF8")
-                        showCreateFolderDialog = false
-                        newFolderName = ""
-                    }
-                }) {
-                    Text("Vytvořit")
+                Button(
+                    onClick = {
+                        if (newFolderName.isNotBlank()) {
+                            onCreateFolder(newFolderName.trim(), "#38BDF8")
+                            showCreateFolderDialog = false
+                            newFolderName = ""
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(stringResource(R.string.folder_create))
                 }
             },
             dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { showCreateFolderDialog = false }) {
-                    Text("Zrušit")
+                TextButton(
+                    onClick = { showCreateFolderDialog = false },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
     }
 
+    // Modal dialog for sharing note (Handwritten PNG vs Markdown Text)
     if (noteToShare != null) {
         val targetNote = noteToShare!!
         AlertDialog(
@@ -178,7 +218,7 @@ fun NotesScreen(
                                 }
                             }
                         },
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -215,7 +255,7 @@ fun NotesScreen(
                             noteToShare = null
                             com.inkaction.app.util.NoteExportUtil.shareTextNote(context, n)
                         },
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -255,98 +295,50 @@ fun NotesScreen(
         )
     }
 
-    Column(
+    LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        if (note != null) {
-            Text("Aktivní poznámka", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            NoteCard(note = note, context = context)
-        } 
-        
-        if (allNotes.isEmpty()) {
-            if (note == null) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(200.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.EditNote,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Text(
-                            text = "Knihovna poznámek je prázdná",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                }
-            }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Historie (Knihovna)",
-                    color = MaterialTheme.colorScheme.outline,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                androidx.compose.material3.TextButton(
-                    onClick = {
-                        val uri = com.inkaction.app.util.BackupUtil.exportNotesToMarkdownZip(context, allNotes)
-                        if (uri != null) {
-                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                type = "application/zip"
-                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            context.startActivity(android.content.Intent.createChooser(intent, context.getString(R.string.export_all_notes_md)))
-                        } else {
-                            Toast.makeText(context, context.getString(R.string.export_notes_empty), Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = stringResource(R.string.export_all_notes_md),
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = stringResource(R.string.export_all_notes_md),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-            
+        // 1. Search Bar
+        item {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Hledat poznámky...") },
+                placeholder = { Text(stringResource(R.string.notes_search_hint)) },
                 leadingIcon = {
-                    Icon(imageVector = Icons.Default.Search, contentDescription = "Search")
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 },
+                trailingIcon = {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
+                shape = CircleShape,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                ),
                 singleLine = true
             )
-            
-            // Složky
+        }
+
+        // 2. Folders Row
+        item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -354,109 +346,236 @@ fun NotesScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(MaterialTheme.colorScheme.primary)
-                        .clickable { showCreateFolderDialog = true }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text("+ Složka", color = androidx.compose.ui.graphics.Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-
-                folders.forEach { folder ->
-                    val isSelected = folder.id == selectedFolderId
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable {
-                                selectedFolderId = if (isSelected) null else folder.id
-                            }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = folder.name,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (isSelected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onBackground
+                // New Folder Chip
+                FilterChip(
+                    selected = false,
+                    onClick = { showCreateFolderDialog = true },
+                    label = { Text(stringResource(R.string.add_folder), fontWeight = FontWeight.Bold) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
                         )
-                    }
+                    },
+                    shape = CircleShape,
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                )
+
+                // All Notes Folder Chip
+                FilterChip(
+                    selected = selectedFolderId == null,
+                    onClick = { selectedFolderId = null },
+                    label = { Text("Všechny") },
+                    shape = CircleShape
+                )
+
+                // User Folders
+                folders.forEach { folder ->
+                    FilterChip(
+                        selected = folder.id == selectedFolderId,
+                        onClick = {
+                            selectedFolderId = if (selectedFolderId == folder.id) null else folder.id
+                        },
+                        label = { Text(folder.name) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Folder,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        shape = CircleShape
+                    )
                 }
             }
+        }
 
-            if (allTags.isNotEmpty()) {
+        // 3. Tags Filter Row (if tags exist)
+        if (allTags.isNotEmpty()) {
+            item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     allTags.forEach { tag ->
                         val isSelected = tag == selectedTag
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(if (isSelected) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceVariant)
-                                .clickable { 
-                                    if (isSelected) selectedTag = null else selectedTag = tag
-                                }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                text = "#$tag",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (isSelected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.tertiary
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                selectedTag = if (isSelected) null else tag
+                            },
+                            label = { Text("#$tag") },
+                            shape = CircleShape,
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onTertiaryContainer
                             )
-                        }
+                        )
                     }
                 }
             }
-            
-            val haptics = LocalHapticFeedback.current
-            filteredNotes.forEach { savedNote ->
-                androidx.compose.runtime.key(savedNote.id) {
-                    val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = {
-                            if (it == SwipeToDismissBoxValue.EndToStart || it == SwipeToDismissBoxValue.StartToEnd) {
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onDeleteNote(savedNote.id) // mapped to archive
-                                true
-                            } else false
-                        }
+        }
+
+        // 4. Active Note (from latest Actionize generation)
+        if (note != null) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = stringResource(R.string.notes_active_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    SwipeToDismissBox(
-                        state = dismissState,
-                        backgroundContent = {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(16.dp))
-                                    .padding(horizontal = 20.dp),
-                                contentAlignment = Alignment.CenterEnd
-                            ) {
-                                Icon(Icons.Default.Archive, contentDescription = "Archivovat", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                    NoteCard(note = note, context = context)
+                }
+            }
+        }
+
+        // 5. Header for Notes History / Library
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.notes_library_title) + " (${filteredNotes.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                if (allNotes.isNotEmpty()) {
+                    TextButton(
+                        onClick = {
+                            val uri = com.inkaction.app.util.BackupUtil.exportNotesToMarkdownZip(context, allNotes)
+                            if (uri != null) {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = "application/zip"
+                                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(android.content.Intent.createChooser(intent, context.getString(R.string.export_all_notes_md)))
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.export_notes_empty), Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(R.string.export_all_notes_md),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        }
+
+        // 6. Notes List or Empty State
+        if (filteredNotes.isEmpty()) {
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.padding(28.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.size(56.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.EditNote,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.outline,
+                                    modifier = Modifier.size(32.dp)
+                                )
                             }
                         }
-                    ) {
+                        Text(
+                            text = stringResource(R.string.notes_empty_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.notes_empty_desc),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            }
+        } else {
+            items(filteredNotes, key = { it.id }) { savedNote ->
+                val dismissState = rememberSwipeToDismissBoxState(
+                    confirmValueChange = {
+                        if (it == SwipeToDismissBoxValue.EndToStart || it == SwipeToDismissBoxValue.StartToEnd) {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onDeleteNote(savedNote.id)
+                            true
+                        } else false
+                    }
+                )
+
+                SwipeToDismissBox(
+                    state = dismissState,
+                    backgroundContent = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(20.dp))
+                                .padding(horizontal = 24.dp),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Icon(
+                                Icons.Default.Archive,
+                                contentDescription = stringResource(R.string.archive_title),
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                ) {
                     SavedNoteCard(
-                        savedNote = savedNote, 
-                        context = context, 
+                        savedNote = savedNote,
+                        context = context,
                         folders = folders,
                         onMoveNote = { folderId -> onMoveNote(savedNote.id, folderId) },
                         onResumeDrawing = { onResumeDrawing(savedNote) },
                         onDeleteNote = { onDeleteNote(savedNote.id) },
-                        onTogglePin = { 
+                        onTogglePin = {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onTogglePin(savedNote.id) 
+                            onTogglePin(savedNote.id)
                         },
                         onEnhance = { onEnhanceNote(savedNote.id) },
                         isEnhancing = enhancingNotes[savedNote.id] == true,
                         onShare = { noteToShare = savedNote }
                     )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
@@ -467,142 +586,152 @@ fun NotesScreen(
 @Composable
 fun NoteCard(note: NoteDto, context: Context) {
     var isExpanded by remember { mutableStateOf(false) }
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(16.dp)
+
+    ElevatedCard(
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().clickable { isExpanded = !isExpanded },
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = note.title.ifBlank { "Nová poznámka" },
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-
-                val sdf = java.text.SimpleDateFormat("dd. MM. yyyy, HH:mm", java.util.Locale.getDefault())
-                val dateString = sdf.format(java.util.Date(note.timestamp))
-
-                Text(
-                    text = "Syntetizováno: $dateString",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
-            }
-
-            Row {
-                IconButton(
-                    onClick = {
-                        com.inkaction.app.util.PdfExportUtil.exportNoteToPdf(
-                            context,
-                            note.title,
-                            "${note.summary}\n\n${note.markdown}"
-                        )
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PictureAsPdf,
-                        contentDescription = stringResource(R.string.export_pdf),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                IconButton(
-                    onClick = {
-                        val text = "# ${note.title}\n\n${note.summary}\n\n${note.markdown}"
-                        val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(android.content.Intent.EXTRA_SUBJECT, note.title)
-                            putExtra(android.content.Intent.EXTRA_TEXT, text)
-                        }
-                        context.startActivity(android.content.Intent.createChooser(sendIntent, context.getString(R.string.share_note)))
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = stringResource(R.string.share_note),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                IconButton(
-                    onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip = ClipData.newPlainText(note.title, "# ${note.title}\n\n${note.summary}\n\n${note.markdown}")
-                        clipboard.setPrimaryClip(clip)
-                        Toast.makeText(context, context.getString(R.string.note_copied), Toast.LENGTH_SHORT).show()
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = stringResource(R.string.copy_note),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        }
-
-        if (isExpanded) {
-        if (note.summary.isNotBlank()) {
-            Spacer(modifier = Modifier.height(12.dp))
-            Box(
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
-                    .padding(12.dp)
+                    .clickable { isExpanded = !isExpanded },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = note.summary,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.secondary,
-                    lineHeight = 18.sp
-                )
-            }
-        }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = note.title.ifBlank { stringResource(R.string.untitled_note) },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
 
-        Spacer(modifier = Modifier.height(14.dp))
+                    val sdf = SimpleDateFormat("dd. MM. yyyy, HH:mm", Locale.getDefault())
+                    val dateString = sdf.format(Date(note.timestamp))
 
-        Text(
-            text = note.markdown,
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            lineHeight = 22.sp
-        )
+                    Text(
+                        text = "Syntetizováno: $dateString",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
 
-        if (note.tags.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(16.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                note.tags.forEach { tag ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                Row {
+                    IconButton(
+                        onClick = {
+                            com.inkaction.app.util.PdfExportUtil.exportNoteToPdf(
+                                context,
+                                note.title,
+                                "${note.summary}\n\n${note.markdown}"
+                            )
+                        }
                     ) {
-                        Text(
-                            text = "#$tag",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.tertiary
+                        Icon(
+                            imageVector = Icons.Default.PictureAsPdf,
+                            contentDescription = stringResource(R.string.export_pdf),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            val text = "# ${note.title}\n\n${note.summary}\n\n${note.markdown}"
+                            val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_SUBJECT, note.title)
+                                putExtra(android.content.Intent.EXTRA_TEXT, text)
+                            }
+                            context.startActivity(android.content.Intent.createChooser(sendIntent, context.getString(R.string.share_note)))
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = stringResource(R.string.share_note),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText(note.title, "# ${note.title}\n\n${note.summary}\n\n${note.markdown}")
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(context, context.getString(R.string.note_copied), Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = stringResource(R.string.copy_note),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             }
-        }
+
+            if (isExpanded) {
+                if (note.summary.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FormatQuote,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = note.summary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                lineHeight = 20.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = note.markdown,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 22.sp
+                )
+
+                if (note.tags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        note.tags.forEach { tag ->
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Text(
+                                    text = "#$tag",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -610,11 +739,11 @@ fun NoteCard(note: NoteDto, context: Context) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SavedNoteCard(
-    savedNote: SavedNote, 
-    context: Context, 
+    savedNote: SavedNote,
+    context: Context,
     folders: List<NoteFolder>,
     onMoveNote: (Long?) -> Unit,
-    onResumeDrawing: () -> Unit, 
+    onResumeDrawing: () -> Unit,
     onDeleteNote: () -> Unit,
     onTogglePin: () -> Unit,
     onEnhance: () -> Unit,
@@ -624,263 +753,313 @@ fun SavedNoteCard(
     var folderMenuExpanded by remember { mutableStateOf(false) }
     var isDetailsExpanded by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(16.dp)
+    ElevatedCard(
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().clickable { isDetailsExpanded = !isDetailsExpanded },
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = savedNote.title.ifBlank { "Nová poznámka" },
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.fillMaxWidth()
-                )
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header Row: Title & Actions
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isDetailsExpanded = !isDetailsExpanded },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = savedNote.title.ifBlank { stringResource(R.string.untitled_note) },
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
 
-                val sdf = java.text.SimpleDateFormat("dd. MM. yyyy, HH:mm", java.util.Locale.getDefault())
-                val dateString = sdf.format(java.util.Date(savedNote.timestamp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Syntetizováno: $dateString",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val sdf = SimpleDateFormat("dd. MM. yyyy, HH:mm", Locale.getDefault())
+                        val dateString = sdf.format(Date(savedNote.timestamp))
 
-                    if (savedNote.folderId != null) {
-                        val folder = folders.find { it.id == savedNote.folderId }
-                        if (folder != null) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(folder.colorHex)))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                        Text(
+                            text = dateString,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+
+                        // Assigned folder chip
+                        val currentFolder = folders.find { it.id == savedNote.folderId }
+                        if (currentFolder != null) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                             ) {
-                                Text(folder.name, fontSize = 10.sp, color = MaterialTheme.colorScheme.surface, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = currentFolder.name,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
                             }
                         }
                     }
                 }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Folder Dropdown
-                Box {
-                    IconButton(onClick = { folderMenuExpanded = true }) {
-                        Icon(Icons.Default.EditNote, contentDescription = "Přiřadit do složky", tint = MaterialTheme.colorScheme.outline)
-                    }
-                    androidx.compose.material3.DropdownMenu(
-                        expanded = folderMenuExpanded,
-                        onDismissRequest = { folderMenuExpanded = false }
-                    ) {
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = { Text("Bez složky") },
-                            onClick = { onMoveNote(null); folderMenuExpanded = false }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onTogglePin) {
+                        Icon(
+                            imageVector = if (savedNote.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                            contentDescription = null,
+                            tint = if (savedNote.isPinned) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(20.dp)
                         )
-                        folders.forEach { folder ->
-                            androidx.compose.material3.DropdownMenuItem(
-                                text = { Text(folder.name) },
-                                onClick = { onMoveNote(folder.id); folderMenuExpanded = false }
+                    }
+                }
+            }
+
+            // Always show summary as an elegant preview
+            if (savedNote.summary.isNotBlank()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FormatQuote,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = savedNote.summary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            lineHeight = 20.sp
+                        )
+                    }
+                }
+            }
+
+            // Expanded details: Markdown & Tags
+            if (isDetailsExpanded) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = savedNote.markdown,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 22.sp
+                )
+
+                if (savedNote.tags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        savedNote.tags.forEach { tag ->
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Text(
+                                    text = "#$tag",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (!savedNote.aiEnhancement.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "AI Rozšíření & Insight",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = savedNote.aiEnhancement,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 }
-                
-                IconButton(onClick = onTogglePin, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        imageVector = if (savedNote.isPinned) Icons.Default.PushPin else Icons.Outlined.PushPin, 
-                        contentDescription = if (savedNote.isPinned) "Odepnout" else "Připnout", 
-                        tint = if (savedNote.isPinned) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outline
-                    )
-                }
-                IconButton(onClick = onDeleteNote, modifier = Modifier.size(36.dp)) {
-                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Smazat", tint = MaterialTheme.colorScheme.outline)
-                }
-                Button(
-                    onClick = onResumeDrawing,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("Kreslit")
-                }
             }
-        }
 
-        if (isDetailsExpanded) {
-        if (savedNote.summary.isNotBlank()) {
+            // Bottom Toolbar Row
             Spacer(modifier = Modifier.height(12.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
-                    .padding(12.dp)
-            ) {
-                Text(
-                    text = savedNote.summary,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.secondary,
-                    lineHeight = 18.sp
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-        Text(
-            text = savedNote.markdown,
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            lineHeight = 22.sp
-        )
-
-        if (savedNote.tags.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(16.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                savedNote.tags.forEach { tag ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "#$tag",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.tertiary
-                        )
-                    }
-                }
-            }
-        }
-
-        // Actions row (Export PDF, Share, Copy, and AI Enhance)
-        Spacer(modifier = Modifier.height(14.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Left: Export actions
             Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = {
-                        com.inkaction.app.util.PdfExportUtil.exportNoteToPdf(
-                            context,
-                            savedNote.title,
-                            "${savedNote.summary}\n\n${savedNote.markdown}"
-                        )
-                    },
-                    modifier = Modifier.size(36.dp)
+                // Left: Draw & Folder
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.PictureAsPdf,
-                        contentDescription = stringResource(R.string.export_pdf),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                IconButton(
-                    onClick = onShare,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = stringResource(R.string.share_note),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                IconButton(
-                    onClick = {
-                        val text = buildString {
-                            append("# ").append(savedNote.title.ifBlank { "Poznámka" }).append("\n\n")
-                            if (savedNote.summary.isNotBlank()) {
-                                append(savedNote.summary).append("\n\n")
-                            }
-                            append(savedNote.markdown)
-                            if (!savedNote.aiEnhancement.isNullOrBlank()) {
-                                append("\n\n---\n### AI Insight\n").append(savedNote.aiEnhancement)
-                            }
-                        }
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip = ClipData.newPlainText(savedNote.title, text)
-                        clipboard.setPrimaryClip(clip)
-                        Toast.makeText(context, context.getString(R.string.note_copied), Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = stringResource(R.string.copy_note),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // Right: AI Enhance button
-            if (savedNote.aiEnhancement == null) {
-                if (isEnhancing) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.tertiary, strokeWidth = 2.dp)
-                        Text("Analyzuji...", color = MaterialTheme.colorScheme.tertiary, fontSize = 12.sp)
-                    }
-                } else {
-                    androidx.compose.material3.OutlinedButton(
-                        onClick = onEnhance,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.tertiary)
+                    OutlinedButton(
+                        onClick = onResumeDrawing,
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.tertiary)
-                            Text("AI Enhance", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Icon(
+                            imageVector = Icons.Default.Brush,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Kreslit", style = MaterialTheme.typography.labelMedium)
+                    }
+
+                    Box {
+                        IconButton(
+                            onClick = { folderMenuExpanded = true },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Folder,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = folderMenuExpanded,
+                            onDismissRequest = { folderMenuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Bez složky") },
+                                onClick = {
+                                    onMoveNote(null)
+                                    folderMenuExpanded = false
+                                }
+                            )
+                            folders.forEach { folder ->
+                                DropdownMenuItem(
+                                    text = { Text(folder.name) },
+                                    onClick = {
+                                        onMoveNote(folder.id)
+                                        folderMenuExpanded = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
-            }
-        }
 
-        if (savedNote.aiEnhancement != null) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f))
-                    .border(1.dp, MaterialTheme.colorScheme.tertiary, RoundedCornerShape(8.dp))
-                    .padding(12.dp)
-            ) {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.tertiary)
-                        Text("AI Insight", color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                // Right: Actions (AI, Share, PDF, Copy)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onEnhance,
+                        enabled = !isEnhancing,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        if (isEnhancing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "AI Rozšířit",
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = savedNote.aiEnhancement,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        lineHeight = 18.sp
-                    )
+
+                    IconButton(
+                        onClick = onShare,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = stringResource(R.string.share_note),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            com.inkaction.app.util.PdfExportUtil.exportNoteToPdf(
+                                context,
+                                savedNote.title,
+                                "${savedNote.summary}\n\n${savedNote.markdown}"
+                            )
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PictureAsPdf,
+                            contentDescription = stringResource(R.string.export_pdf),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText(savedNote.title, "# ${savedNote.title}\n\n${savedNote.summary}\n\n${savedNote.markdown}")
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(context, context.getString(R.string.note_copied), Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = stringResource(R.string.copy_note),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
-        }
         }
     }
 }

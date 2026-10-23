@@ -96,6 +96,8 @@ fun MainWorkspaceScreen(
         }
     }
 
+    val syncState by viewModel.syncState.collectAsState()
+
     if (showSettings) {
         SettingsDialog(
             initialApiKey = appSettings.apiKey,
@@ -104,9 +106,14 @@ fun MainWorkspaceScreen(
             initialLanguage = appSettings.noteLanguage,
             initialThemeMode = appSettings.themeMode,
             initialDefaultEventTime = appSettings.defaultEventTime,
+            initialCloudSyncEnabled = appSettings.cloudSyncEnabled,
+            initialSyncPassphrase = appSettings.syncPassphrase,
+            lastSyncTimestamp = appSettings.lastSyncTimestamp,
+            syncState = syncState,
+            onSyncNow = { pass -> viewModel.syncNow(pass) },
             onDismiss = { showSettings = false },
-            onSave = { key, model, reminders, language, themeMode, defaultTime ->
-                viewModel.saveSettings(key, model, reminders, language, themeMode, defaultTime)
+            onSave = { key, model, reminders, language, themeMode, defaultTime, cloudSync, pass ->
+                viewModel.saveSettings(key, model, reminders, language, themeMode, defaultTime, cloudSync, pass)
                 showSettings = false
             },
             onExportBackup = {

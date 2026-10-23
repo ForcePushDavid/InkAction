@@ -36,3 +36,16 @@ data class MigrationNote(
     val id: Long,
     val strokes: List<InkStroke>? = null
 )
+
+data class EncryptedCloudNote(
+    val id: String = "",
+    val userId: String = "",
+    val updatedAt: Long = 0L,
+    val iv: String = "",
+    val authTag: String = "",
+    val ciphertext: String = "",
+    val hasStrokes: Boolean = false,
+    val strokesCiphertext: String = "",
+    val strokesIv: String = "",
+    val isArchived: Boolean = false
+)

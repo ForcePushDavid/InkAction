@@ -106,4 +106,40 @@
     <string name="share_text_note">Sdílet textovou poznámku</string>
     <string name="reference_panel">Referenční panel</string>
     <string name="toggle_reference_panel">Přepnout referenční panel</string>
+
+    <!-- Cloud Sync & Privacy -->
+    <string name="section_cloud_sync">Cloud &amp; Synchronizace zařízení</string>
+    <string name="cloud_sync_toggle">Cloudová synchronizace</string>
+    <string name="cloud_sync_toggle_desc">Synchronizace poznámek mezi telefonem a tabletem</string>
+    <string name="cloud_sync_local_only_title">Pouze lokální režim (Maximální soukromí)</string>
+    <string name="cloud_sync_local_only_desc">Veškeré poznámky, tahy perem a data zůstávají výhradně v tomto zařízení. Ukládání do cloudu je zcela zakázáno.</string>
+    <string name="cloud_sync_e2ee_badge">Aktivní Zero-Knowledge AES-256 E2EE</string>
+    <string name="cloud_sync_e2ee_desc">Poznámky i tahy pera jsou šifrovány přímo na zařízení. Cloudový poskytovatel k nim nemá přístup.</string>
+    <string name="cloud_sync_passphrase">Šifrovací Sync klíč (Passphrase)</string>
+    <string name="cloud_sync_passphrase_hint">Zadejte stejný klíč na telefonu i tabletu</string>
+    <string name="cloud_sync_button">Synchronizovat nyní</string>
+    <string name="cloud_syncing">Synchronizuji s cloudem...</string>
+    <string name="cloud_sync_last_time">Poslední synchronizace: %1$s</string>
+    <string name="cloud_sync_never">Zatím nesynchronizováno</string>
+    <string name="section_ai">Umělá inteligence (Gemini)</string>
+    <string name="api_key_security_note">Uloženo pouze v hardwarovém čipu Knox / Keystore (nikdy se neodesílá do cloudu)</string>
+    <string name="section_appearance">Vzhled &amp; Chování</string>
+    <string name="section_backup">Záloha &amp; Aktualizace</string>
+    <string name="notes_library_title">Knihovna poznámek</string>
+    <string name="notes_active_title">Aktivní poznámka</string>
+    <string name="notes_search_hint">Hledat poznámky a #štítky...</string>
+    <string name="notes_empty_title">Knihovna poznámek je prázdná</string>
+    <string name="notes_empty_desc">Pište na plátno a klepněte na Actionize pro vytvoření chytrých poznámek</string>
+    <string name="todos_empty_title">Žádné úkoly</string>
+    <string name="todos_empty_desc">Úkoly a odrážky z vašich poznámek se zobrazí zde</string>
+    <string name="todos_active_header">Aktivní úkoly</string>
+    <string name="todos_completed_header">Hotovo</string>
+    <string name="priority_high">Vysoká</string>
+    <string name="priority_medium">Střední</string>
+    <string name="priority_low">Nízká</string>
+    <string name="note_status_local">Lokální</string>
+    <string name="note_status_synced">Synchronizováno (E2EE)</string>
+    <string name="add_folder">+ Složka</string>
+    <string name="folder_name">Název složky</string>
+    <string name="folder_create">Vytvořit</string>
 </resources>

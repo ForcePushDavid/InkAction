@@ -43,6 +43,8 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     private val app = application as InkActionApp
     private val noteRepository = app.noteRepository
     private val settingsRepository = app.settingsRepository
+    val cloudSyncManager = app.cloudSyncManager
+    val syncState = cloudSyncManager.syncState
 
     val settings = settingsRepository.settings
 
@@ -106,15 +108,47 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         settingsRepository.setFingerDrawingEnabled(!current)
     }
 
+    fun setCloudSyncEnabled(enabled: Boolean) {
+        settingsRepository.setCloudSyncEnabled(enabled)
+        cloudSyncManager.updateSyncStateBasedOnSettings()
+    }
+
+    fun syncNow(passphrase: String? = null) {
+        viewModelScope.launch {
+            val result = cloudSyncManager.syncNow(passphrase)
+            when (result) {
+                is com.inkaction.app.data.sync.SyncState.Success -> {
+                    _uiEvent.send(UiEvent.ShowSnackbar(result.message.ifBlank { "Synchronizace dokončena" }))
+                }
+                is com.inkaction.app.data.sync.SyncState.Error -> {
+                    _uiEvent.send(UiEvent.ShowSnackbar(result.message))
+                }
+                else -> {}
+            }
+        }
+    }
+
     fun saveSettings(
         apiKey: String,
         modelName: String,
         remindersEnabled: Boolean,
         noteLanguage: String,
         themeMode: String,
-        defaultEventTime: String
+        defaultEventTime: String,
+        cloudSyncEnabled: Boolean = settings.value.cloudSyncEnabled,
+        syncPassphrase: String = settings.value.syncPassphrase
     ) {
-        settingsRepository.saveSettings(apiKey, modelName, remindersEnabled, noteLanguage, themeMode, defaultEventTime)
+        settingsRepository.saveSettings(
+            apiKey = apiKey,
+            modelName = modelName,
+            remindersEnabled = remindersEnabled,
+            noteLanguage = noteLanguage,
+            themeMode = themeMode,
+            defaultEventTime = defaultEventTime,
+            cloudSyncEnabled = cloudSyncEnabled,
+            syncPassphrase = syncPassphrase
+        )
+        cloudSyncManager.updateSyncStateBasedOnSettings()
     }
 
     fun setTool(tool: ToolType) {
