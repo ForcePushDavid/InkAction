@@ -158,6 +158,18 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun signInWithGoogle(idToken: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            val result = cloudSyncManager.signInWithGoogle(idToken)
+            result.onSuccess {
+                _uiEvent.send(UiEvent.ShowSnackbar("Přihlášen přes Google: ${it.email}"))
+                onResult(true, null)
+            }.onFailure {
+                onResult(false, it.localizedMessage ?: "Chyba přihlášení přes Google")
+            }
+        }
+    }
+
     fun signOut() {
         cloudSyncManager.signOut()
         viewModelScope.launch {

@@ -123,6 +123,7 @@ fun MainWorkspaceScreen(
             currentUser = currentUser,
             onSignIn = { email, password, onResult -> viewModel.signInWithEmail(email, password, onResult) },
             onRegister = { email, password, onResult -> viewModel.registerWithEmail(email, password, onResult) },
+            onSignInWithGoogle = { idToken, onResult -> viewModel.signInWithGoogle(idToken, onResult) },
             onSignOut = { viewModel.signOut() },
             onSaveFirebaseConfig = { projectId, apiKey -> viewModel.setFirebaseConfig(projectId, apiKey) },
             onSyncNow = { pass -> viewModel.syncNow(pass) },

@@ -157,4 +157,6 @@
     <string name="firebase_project_id">Firebase ID projektu</string>
     <string name="firebase_api_key">Firebase Web API klíč</string>
     <string name="sync_login_required">Pro synchronizaci poznámek se nejprve přihlaste</string>
+    <string name="sign_in_with_google">Přihlásit se přes Google</string>
+    <string name="or_email_password">nebo e-mailem a heslem</string>
 </resources>

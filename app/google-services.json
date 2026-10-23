@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "815669435650",
+    "project_id": "inkactiondev",
+    "storage_bucket": "inkactiondev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:815669435650:android:04de89afad8abcfe93f61b",
+        "android_client_info": {
+          "package_name": "com.inkaction.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "815669435650-dt040k4j004t6hk9iiis8r4b40sndrp7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGlohz3c5ZhVdNvh6ZZVFOKZWIpZxvV5I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "815669435650-dt040k4j004t6hk9iiis8r4b40sndrp7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

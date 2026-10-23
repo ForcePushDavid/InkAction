@@ -4,6 +4,7 @@ import android.content.Context
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.inkaction.app.data.NoteRepository
@@ -129,6 +130,27 @@ class CloudSyncManager(
             val authResult = authInstance.createUserWithEmailAndPassword(email.trim(), password).await()
             val user = authResult.user ?: throw Exception("Registrace selhala.")
             val info = UserAccountInfo(email = user.email ?: email.trim(), uid = user.uid)
+            _currentUserFlow.value = info
+            settingsRepository.setSyncAccountEmail(info.email)
+            Result.success(info)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun signInWithGoogle(idToken: String): Result<UserAccountInfo> = withContext(Dispatchers.IO) {
+        if (!ensureFirebase()) {
+            return@withContext Result.failure(Exception("Firebase není inicializován."))
+        }
+        try {
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            val authInstance = auth ?: FirebaseAuth.getInstance()
+            val authResult = authInstance.signInWithCredential(credential).await()
+            val user = authResult.user ?: throw Exception("Přihlášení přes Google selhalo.")
+            val info = UserAccountInfo(
+                email = user.email ?: user.displayName ?: "Google User",
+                uid = user.uid
+            )
             _currentUserFlow.value = info
             settingsRepository.setSyncAccountEmail(info.email)
             Result.success(info)

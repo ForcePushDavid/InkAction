@@ -1,5 +1,7 @@
 package com.inkaction.app.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -43,6 +45,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -63,6 +66,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -72,6 +76,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.inkaction.app.R
 import com.inkaction.app.ai.GeminiModelCatalog
 import com.inkaction.app.data.sync.SyncState
@@ -98,6 +105,7 @@ fun SettingsDialog(
     currentUser: UserAccountInfo? = null,
     onSignIn: ((String, String, (Boolean, String?) -> Unit) -> Unit)? = null,
     onRegister: ((String, String, (Boolean, String?) -> Unit) -> Unit)? = null,
+    onSignInWithGoogle: ((String, (Boolean, String?) -> Unit) -> Unit)? = null,
     onSignOut: (() -> Unit)? = null,
     onSaveFirebaseConfig: ((String, String) -> Unit)? = null,
     onSyncNow: ((String) -> Unit)? = null,
@@ -138,6 +146,42 @@ fun SettingsDialog(
     var showFirebaseConfig by remember { mutableStateOf(false) }
     var firebaseProjectId by remember { mutableStateOf(initialFirebaseProjectId) }
     var firebaseApiKey by remember { mutableStateOf(initialFirebaseApiKey) }
+
+    val context = LocalContext.current
+    val googleSignInClient = remember {
+        val webClientId = try {
+            context.getString(R.string.default_web_client_id)
+        } catch (e: Exception) {
+            "815669435650-dt040k4j004t6hk9iiis8r4b40sndrp7.apps.googleusercontent.com"
+        }
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(webClientId)
+            .requestEmail()
+            .build()
+        GoogleSignIn.getClient(context, gso)
+    }
+
+    val googleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            val idToken = account?.idToken
+            if (!idToken.isNullOrBlank()) {
+                onSignInWithGoogle?.invoke(idToken) { success, err ->
+                    isAuthLoading = false
+                    if (!success) authErrorMessage = err
+                }
+            } else {
+                isAuthLoading = false
+                authErrorMessage = "Nepodařilo se získat Google token."
+            }
+        } catch (e: Exception) {
+            isAuthLoading = false
+            authErrorMessage = e.localizedMessage ?: "Chyba přihlášení přes Google"
+        }
+    }
 
     var modelExpanded by remember { mutableStateOf(false) }
     var languageExpanded by remember { mutableStateOf(false) }
@@ -347,7 +391,50 @@ fun SettingsDialog(
                                         }
                                     }
                                 } else {
-                                    // Not logged in -> Show Tabs: Sign In / Create Account
+                                    // Not logged in -> Google SSO + Email/Password options
+                                    OutlinedButton(
+                                        onClick = {
+                                            isAuthLoading = true
+                                            authErrorMessage = null
+                                            googleSignInClient.signOut().addOnCompleteListener {
+                                                googleLauncher.launch(googleSignInClient.signInIntent)
+                                            }
+                                        },
+                                        enabled = !isAuthLoading,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(46.dp),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.AccountCircle,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = stringResource(R.string.sign_in_with_google),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        HorizontalDivider(modifier = Modifier.weight(1f))
+                                        Text(
+                                            text = stringResource(R.string.or_email_password),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        HorizontalDivider(modifier = Modifier.weight(1f))
+                                    }
+
+                                    // Show Tabs: Sign In / Create Account
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)

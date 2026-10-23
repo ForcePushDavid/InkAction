@@ -157,4 +157,6 @@
     <string name="firebase_project_id">Firebase Project-ID</string>
     <string name="firebase_api_key">Firebase Web API-sleutel</string>
     <string name="sync_login_required">Log eerst in om notities te synchroniseren</string>
+    <string name="sign_in_with_google">Inloggen met Google</string>
+    <string name="or_email_password">of e-mail en wachtwoord</string>
 </resources>

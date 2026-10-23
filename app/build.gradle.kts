@@ -12,8 +12,8 @@ android {
         applicationId = "com.inkaction.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 51
-        versionName = "2.4.1"
+        versionCode = 52
+        versionName = "2.4.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -100,6 +100,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
 }
 
 if (file("google-services.json").exists()) {
