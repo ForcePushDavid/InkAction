@@ -2,6 +2,7 @@ package com.inkaction.app.data.sync
 
 import android.content.Context
 import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -16,6 +17,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+
+data class UserAccountInfo(
+    val email: String,
+    val uid: String
+)
 
 sealed class SyncState {
     object Disabled : SyncState()
@@ -33,11 +39,15 @@ class CloudSyncManager(
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
+    private val _currentUserFlow = MutableStateFlow<UserAccountInfo?>(null)
+    val currentUserFlow: StateFlow<UserAccountInfo?> = _currentUserFlow.asStateFlow()
+
     private var firestore: FirebaseFirestore? = null
     private var auth: FirebaseAuth? = null
 
     init {
         updateSyncStateBasedOnSettings()
+        checkCurrentUser()
     }
 
     private fun isFirebaseConfigured(): Boolean {
@@ -48,18 +58,93 @@ class CloudSyncManager(
         }
     }
 
-    private fun ensureFirebase(): Boolean {
+    fun ensureFirebase(): Boolean {
         return try {
             if (isFirebaseConfigured()) {
                 if (firestore == null) firestore = FirebaseFirestore.getInstance()
                 if (auth == null) auth = FirebaseAuth.getInstance()
                 true
             } else {
-                false
+                val settings = settingsRepository.settings.value
+                if (settings.firebaseProjectId.isNotBlank() && settings.firebaseApiKey.isNotBlank()) {
+                    val options = FirebaseOptions.Builder()
+                        .setApplicationId("com.inkaction.app")
+                        .setApiKey(settings.firebaseApiKey.trim())
+                        .setProjectId(settings.firebaseProjectId.trim())
+                        .build()
+                    FirebaseApp.initializeApp(context, options)
+                    if (firestore == null) firestore = FirebaseFirestore.getInstance()
+                    if (auth == null) auth = FirebaseAuth.getInstance()
+                    true
+                } else {
+                    false
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
             false
+        }
+    }
+
+    fun checkCurrentUser() {
+        try {
+            if (ensureFirebase()) {
+                val current = auth?.currentUser
+                if (current != null && !current.isAnonymous && !current.email.isNullOrBlank()) {
+                    val info = UserAccountInfo(email = current.email ?: "", uid = current.uid)
+                    _currentUserFlow.value = info
+                    settingsRepository.setSyncAccountEmail(info.email)
+                    return
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        _currentUserFlow.value = null
+    }
+
+    suspend fun signInWithEmail(email: String, password: String): Result<UserAccountInfo> = withContext(Dispatchers.IO) {
+        if (!ensureFirebase()) {
+            return@withContext Result.failure(Exception("Firebase není inicializován. Vložte soubor google-services.json nebo zadejte Firebase konfiguraci."))
+        }
+        try {
+            val authInstance = auth ?: FirebaseAuth.getInstance()
+            val authResult = authInstance.signInWithEmailAndPassword(email.trim(), password).await()
+            val user = authResult.user ?: throw Exception("Přihlášení selhalo.")
+            val info = UserAccountInfo(email = user.email ?: email.trim(), uid = user.uid)
+            _currentUserFlow.value = info
+            settingsRepository.setSyncAccountEmail(info.email)
+            Result.success(info)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun registerWithEmail(email: String, password: String): Result<UserAccountInfo> = withContext(Dispatchers.IO) {
+        if (!ensureFirebase()) {
+            return@withContext Result.failure(Exception("Firebase není inicializován. Vložte soubor google-services.json nebo zadejte Firebase konfiguraci."))
+        }
+        try {
+            val authInstance = auth ?: FirebaseAuth.getInstance()
+            val authResult = authInstance.createUserWithEmailAndPassword(email.trim(), password).await()
+            val user = authResult.user ?: throw Exception("Registrace selhala.")
+            val info = UserAccountInfo(email = user.email ?: email.trim(), uid = user.uid)
+            _currentUserFlow.value = info
+            settingsRepository.setSyncAccountEmail(info.email)
+            Result.success(info)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun signOut() {
+        try {
+            auth?.signOut()
+            _currentUserFlow.value = null
+            settingsRepository.setSyncAccountEmail("")
+            updateSyncStateBasedOnSettings()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -90,26 +175,32 @@ class CloudSyncManager(
         }
 
         if (!ensureFirebase()) {
-            val state = SyncState.Error("Firebase není nakonfigurován (chybí google-services.json)")
+            val state = SyncState.Error("Firebase není inicializován (chybí google-services.json nebo konfigurace)")
+            _syncState.value = state
+            return@withContext state
+        }
+
+        val currentAuth = auth ?: FirebaseAuth.getInstance()
+        var user = currentAuth.currentUser
+        if (user == null || user.email.isNullOrBlank()) {
+            val state = SyncState.Error("Pro synchronizaci se nejprve přihlaste ke svému účtu níže.")
             _syncState.value = state
             return@withContext state
         }
 
         val passphrase = customPassphrase?.ifBlank { null }
-            ?: settings.syncPassphrase.ifBlank { "inkaction_device_vault_${android.os.Build.ID}" }
+            ?: settings.syncPassphrase.ifBlank { null }
 
+        if (passphrase.isNullOrBlank()) {
+            val state = SyncState.Error("Zadejte Sync Passphrase pro šifrování poznámek.")
+            _syncState.value = state
+            return@withContext state
+        }
+
+        val userId = user.uid
         _syncState.value = SyncState.Syncing
 
         try {
-            val currentAuth = auth ?: FirebaseAuth.getInstance()
-            var user = currentAuth.currentUser
-            if (user == null) {
-                // Sign in anonymously if no Google or email account is logged in yet
-                val authResult = currentAuth.signInAnonymously().await()
-                user = authResult.user
-            }
-
-            val userId = user?.uid ?: throw IllegalStateException("Nepodařilo se získat ID uživatele")
             val db = firestore ?: FirebaseFirestore.getInstance()
             val userNotesCollection = db.collection("users").document(userId).collection("notes")
 
@@ -133,6 +224,7 @@ class CloudSyncManager(
             val snapshot = userNotesCollection.get().await()
             val localNotesMap = localNotes.associateBy { it.id }.toMutableMap()
 
+            var decryptionErrors = 0
             for (doc in snapshot.documents) {
                 val cloudNote = doc.toObject(EncryptedCloudNote::class.java) ?: continue
                 val noteId = cloudNote.id.toLongOrNull() ?: continue
@@ -165,7 +257,7 @@ class CloudSyncManager(
                             )
                         }
                     } catch (e: Exception) {
-                        // Passphrase mismatch or decryption error
+                        decryptionErrors++
                         e.printStackTrace()
                     }
                 }
@@ -173,7 +265,14 @@ class CloudSyncManager(
 
             val syncTime = System.currentTimeMillis()
             settingsRepository.setLastSyncTimestamp(syncTime)
-            val successState = SyncState.Success(syncTime, "Synchronizace proběhla úspěšně")
+
+            val successMsg = if (decryptionErrors > 0) {
+                "Synchronizováno, ale $decryptionErrors poznámek se nepodařilo dešifrovat (zkontrolujte Passphrase)."
+            } else {
+                "Synchronizace úspěšně dokončena"
+            }
+
+            val successState = SyncState.Success(syncTime, successMsg)
             _syncState.value = successState
             return@withContext successState
         } catch (e: Exception) {

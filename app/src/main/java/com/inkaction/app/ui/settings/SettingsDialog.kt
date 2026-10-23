@@ -1,5 +1,6 @@
 package com.inkaction.app.ui.settings
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,27 +17,32 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Backup
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +65,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -66,6 +75,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.inkaction.app.R
 import com.inkaction.app.ai.GeminiModelCatalog
 import com.inkaction.app.data.sync.SyncState
+import com.inkaction.app.data.sync.UserAccountInfo
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -81,8 +91,15 @@ fun SettingsDialog(
     initialDefaultEventTime: String,
     initialCloudSyncEnabled: Boolean = false,
     initialSyncPassphrase: String = "",
+    initialFirebaseProjectId: String = "",
+    initialFirebaseApiKey: String = "",
     lastSyncTimestamp: Long = 0L,
     syncState: SyncState = SyncState.Idle,
+    currentUser: UserAccountInfo? = null,
+    onSignIn: ((String, String, (Boolean, String?) -> Unit) -> Unit)? = null,
+    onRegister: ((String, String, (Boolean, String?) -> Unit) -> Unit)? = null,
+    onSignOut: (() -> Unit)? = null,
+    onSaveFirebaseConfig: ((String, String) -> Unit)? = null,
     onSyncNow: ((String) -> Unit)? = null,
     onDismiss: () -> Unit,
     onSave: (
@@ -107,6 +124,20 @@ fun SettingsDialog(
     var defaultEventTime by remember { mutableStateOf(initialDefaultEventTime) }
     var cloudSyncEnabled by remember { mutableStateOf(initialCloudSyncEnabled) }
     var syncPassphrase by remember { mutableStateOf(initialSyncPassphrase) }
+
+    // Auth Form State
+    var authEmail by remember { mutableStateOf("") }
+    var authPassword by remember { mutableStateOf("") }
+    var isRegisterMode by remember { mutableStateOf(false) }
+    var isAuthLoading by remember { mutableStateOf(false) }
+    var authErrorMessage by remember { mutableStateOf<String?>(null) }
+    var showPassword by remember { mutableStateOf(false) }
+    var showPassphrase by remember { mutableStateOf(false) }
+
+    // Firebase Config Form State
+    var showFirebaseConfig by remember { mutableStateOf(false) }
+    var firebaseProjectId by remember { mutableStateOf(initialFirebaseProjectId) }
+    var firebaseApiKey by remember { mutableStateOf(initialFirebaseApiKey) }
 
     var modelExpanded by remember { mutableStateOf(false) }
     var languageExpanded by remember { mutableStateOf(false) }
@@ -262,41 +293,257 @@ fun SettingsDialog(
                             }
                         }
                     } else {
-                        // Cloud Sync & E2EE Settings
+                        // Cloud Sync is ON:
+                        // SUB-SECTION A: USER ACCOUNT (LOGIN / REGISTRATION)
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                if (currentUser != null && currentUser.email.isNotBlank()) {
+                                    // Logged in state
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.AccountCircle,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(32.dp)
+                                            )
+                                            Column {
+                                                Text(
+                                                    text = "Účet synchronizace",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.outline
+                                                )
+                                                Text(
+                                                    text = currentUser.email,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = { onSignOut?.invoke() },
+                                            shape = RoundedCornerShape(10.dp),
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(stringResource(R.string.sign_out_button), style = MaterialTheme.typography.labelSmall)
+                                        }
+                                    }
+                                } else {
+                                    // Not logged in -> Show Tabs: Sign In / Create Account
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        FilterChip(
+                                            selected = !isRegisterMode,
+                                            onClick = {
+                                                isRegisterMode = false
+                                                authErrorMessage = null
+                                            },
+                                            label = { Text(stringResource(R.string.sign_in_title)) },
+                                            shape = CircleShape
+                                        )
+                                        FilterChip(
+                                            selected = isRegisterMode,
+                                            onClick = {
+                                                isRegisterMode = true
+                                                authErrorMessage = null
+                                            },
+                                            label = { Text(stringResource(R.string.create_account_title)) },
+                                            shape = CircleShape
+                                        )
+                                    }
+
+                                    OutlinedTextField(
+                                        value = authEmail,
+                                        onValueChange = { authEmail = it },
+                                        label = { Text(stringResource(R.string.email_label)) },
+                                        placeholder = { Text("např. david@gmail.com") },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true
+                                    )
+
+                                    OutlinedTextField(
+                                        value = authPassword,
+                                        onValueChange = { authPassword = it },
+                                        label = { Text(stringResource(R.string.password_label)) },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        },
+                                        trailingIcon = {
+                                            IconButton(onClick = { showPassword = !showPassword }) {
+                                                Icon(
+                                                    imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        },
+                                        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true
+                                    )
+
+                                    if (authErrorMessage != null) {
+                                        Text(
+                                            text = authErrorMessage!!,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            if (authEmail.isBlank() || authPassword.isBlank()) {
+                                                authErrorMessage = "Vyplňte e-mail a heslo."
+                                                return@Button
+                                            }
+                                            isAuthLoading = true
+                                            authErrorMessage = null
+
+                                            if (isRegisterMode) {
+                                                onRegister?.invoke(authEmail, authPassword) { success, err ->
+                                                    isAuthLoading = false
+                                                    if (!success) authErrorMessage = err
+                                                }
+                                            } else {
+                                                onSignIn?.invoke(authEmail, authPassword) { success, err ->
+                                                    isAuthLoading = false
+                                                    if (!success) authErrorMessage = err
+                                                }
+                                            }
+                                        },
+                                        enabled = !isAuthLoading,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        if (isAuthLoading) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(16.dp),
+                                                strokeWidth = 2.dp,
+                                                color = MaterialTheme.colorScheme.onPrimary
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                        }
+                                        Text(
+                                            text = if (isRegisterMode) stringResource(R.string.create_account_button) else stringResource(R.string.sign_in_button),
+                                            style = MaterialTheme.typography.labelLarge
+                                        )
+                                    }
+
+                                    // Expandable custom Firebase config (optional for custom project)
+                                    TextButton(
+                                        onClick = { showFirebaseConfig = !showFirebaseConfig },
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                                    ) {
+                                        Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = if (showFirebaseConfig) "Skrýt Firebase konfiguraci" else "Vlastní Firebase projekt (volitelné)",
+                                            fontSize = 11.sp
+                                        )
+                                    }
+
+                                    AnimatedVisibility(visible = showFirebaseConfig) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                                                .padding(10.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            OutlinedTextField(
+                                                value = firebaseProjectId,
+                                                onValueChange = { firebaseProjectId = it },
+                                                label = { Text(stringResource(R.string.firebase_project_id)) },
+                                                placeholder = { Text("moje-poznámky-app") },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                singleLine = true
+                                            )
+                                            OutlinedTextField(
+                                                value = firebaseApiKey,
+                                                onValueChange = { firebaseApiKey = it },
+                                                label = { Text(stringResource(R.string.firebase_api_key)) },
+                                                placeholder = { Text("AIzaSy...") },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                singleLine = true
+                                            )
+                                            Button(
+                                                onClick = {
+                                                    onSaveFirebaseConfig?.invoke(firebaseProjectId.trim(), firebaseApiKey.trim())
+                                                },
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text("Uložit Firebase projekt", fontSize = 12.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // SUB-SECTION B: ZERO-KNOWLEDGE E2EE BADGE & PASSPHRASE
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp),
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
                             border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.Top,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Security,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Security,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                     Text(
                                         text = stringResource(R.string.cloud_sync_e2ee_badge),
                                         style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
                                     )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = stringResource(R.string.cloud_sync_e2ee_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
                                 }
+                                Text(
+                                    text = stringResource(R.string.cloud_sync_e2ee_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
 
+                        // PASSPHRASE INPUT FIELD (User explicitly asked to keep this!)
                         OutlinedTextField(
                             value = syncPassphrase,
                             onValueChange = { syncPassphrase = it },
@@ -310,11 +557,23 @@ fun SettingsDialog(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             },
+                            trailingIcon = {
+                                IconButton(onClick = { showPassphrase = !showPassphrase }) {
+                                    Icon(
+                                        imageVector = if (showPassphrase) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            },
+                            visualTransformation = if (showPassphrase) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
                         )
 
+                        // SUB-SECTION C: SYNC TRIGGER & STATUS
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,

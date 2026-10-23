@@ -19,7 +19,9 @@ data class AppSettings(
     val syncPassphrase: String = "",
     val syncAccountEmail: String = "",
     val lastSyncTimestamp: Long = 0L,
-    val penStrokeWidth: Float = 3.5f
+    val penStrokeWidth: Float = 3.5f,
+    val firebaseProjectId: String = "",
+    val firebaseApiKey: String = ""
 )
 
 class SettingsRepository(context: Context) {
@@ -42,7 +44,20 @@ class SettingsRepository(context: Context) {
             syncPassphrase = prefs.getString("sync_passphrase", "") ?: "",
             syncAccountEmail = prefs.getString("sync_account_email", "") ?: "",
             lastSyncTimestamp = prefs.getLong("last_sync_timestamp", 0L),
-            penStrokeWidth = prefs.getFloat("pen_stroke_width", 3.5f)
+            penStrokeWidth = prefs.getFloat("pen_stroke_width", 3.5f),
+            firebaseProjectId = prefs.getString("firebase_project_id", "") ?: "",
+            firebaseApiKey = prefs.getString("firebase_api_key", "") ?: ""
+        )
+    }
+
+    fun setFirebaseConfig(projectId: String, apiKey: String) {
+        prefs.edit()
+            .putString("firebase_project_id", projectId)
+            .putString("firebase_api_key", apiKey)
+            .apply()
+        _settings.value = _settings.value.copy(
+            firebaseProjectId = projectId,
+            firebaseApiKey = apiKey
         )
     }
 

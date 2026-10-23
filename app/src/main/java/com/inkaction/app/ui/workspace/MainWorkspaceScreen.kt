@@ -104,6 +104,7 @@ fun MainWorkspaceScreen(
     }
 
     val syncState by viewModel.syncState.collectAsState()
+    val currentUser by viewModel.currentUser.collectAsState()
 
     if (showSettings) {
         SettingsDialog(
@@ -115,8 +116,15 @@ fun MainWorkspaceScreen(
             initialDefaultEventTime = appSettings.defaultEventTime,
             initialCloudSyncEnabled = appSettings.cloudSyncEnabled,
             initialSyncPassphrase = appSettings.syncPassphrase,
+            initialFirebaseProjectId = appSettings.firebaseProjectId,
+            initialFirebaseApiKey = appSettings.firebaseApiKey,
             lastSyncTimestamp = appSettings.lastSyncTimestamp,
             syncState = syncState,
+            currentUser = currentUser,
+            onSignIn = { email, password, onResult -> viewModel.signInWithEmail(email, password, onResult) },
+            onRegister = { email, password, onResult -> viewModel.registerWithEmail(email, password, onResult) },
+            onSignOut = { viewModel.signOut() },
+            onSaveFirebaseConfig = { projectId, apiKey -> viewModel.setFirebaseConfig(projectId, apiKey) },
             onSyncNow = { pass -> viewModel.syncNow(pass) },
             onDismiss = { showSettings = false },
             onSave = { key, model, reminders, language, themeMode, defaultTime, cloudSync, pass ->

@@ -45,6 +45,7 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     private val settingsRepository = app.settingsRepository
     val cloudSyncManager = app.cloudSyncManager
     val syncState = cloudSyncManager.syncState
+    val currentUser = cloudSyncManager.currentUserFlow
 
     val settings = settingsRepository.settings
 
@@ -131,6 +132,42 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
     fun setCloudSyncEnabled(enabled: Boolean) {
         settingsRepository.setCloudSyncEnabled(enabled)
         cloudSyncManager.updateSyncStateBasedOnSettings()
+    }
+
+    fun signInWithEmail(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            val result = cloudSyncManager.signInWithEmail(email, password)
+            result.onSuccess {
+                _uiEvent.send(UiEvent.ShowSnackbar("Přihlášen jako ${it.email}"))
+                onResult(true, null)
+            }.onFailure {
+                onResult(false, it.localizedMessage ?: "Chyba přihlášení")
+            }
+        }
+    }
+
+    fun registerWithEmail(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            val result = cloudSyncManager.registerWithEmail(email, password)
+            result.onSuccess {
+                _uiEvent.send(UiEvent.ShowSnackbar("Účet vytvořen: ${it.email}"))
+                onResult(true, null)
+            }.onFailure {
+                onResult(false, it.localizedMessage ?: "Chyba registrace")
+            }
+        }
+    }
+
+    fun signOut() {
+        cloudSyncManager.signOut()
+        viewModelScope.launch {
+            _uiEvent.send(UiEvent.ShowSnackbar("Byl jste odhlášen"))
+        }
+    }
+
+    fun setFirebaseConfig(projectId: String, apiKey: String) {
+        settingsRepository.setFirebaseConfig(projectId, apiKey)
+        cloudSyncManager.ensureFirebase()
     }
 
     fun syncNow(passphrase: String? = null) {

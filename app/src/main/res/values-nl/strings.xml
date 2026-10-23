@@ -142,4 +142,19 @@
     <string name="add_folder">+ Map</string>
     <string name="folder_name">Mapnaam</string>
     <string name="folder_create">Maken</string>
+
+    <!-- User Account & Auth -->
+    <string name="sign_in_title">Inloggen</string>
+    <string name="create_account_title">Account aanmaken</string>
+    <string name="email_label">E-mail</string>
+    <string name="password_label">Wachtwoord</string>
+    <string name="sign_in_button">Inloggen</string>
+    <string name="create_account_button">Account aanmaken</string>
+    <string name="signed_in_as">Ingelogd als: %1$s</string>
+    <string name="sign_out_button">Uitloggen</string>
+    <string name="auth_error_prefix">Inlogfout: %1$s</string>
+    <string name="firebase_config_title">Firebase configuratie</string>
+    <string name="firebase_project_id">Firebase Project-ID</string>
+    <string name="firebase_api_key">Firebase Web API-sleutel</string>
+    <string name="sync_login_required">Log eerst in om notities te synchroniseren</string>
 </resources>

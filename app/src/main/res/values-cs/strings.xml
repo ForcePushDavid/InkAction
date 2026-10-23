@@ -142,4 +142,19 @@
     <string name="add_folder">+ Složka</string>
     <string name="folder_name">Název složky</string>
     <string name="folder_create">Vytvořit</string>
+
+    <!-- User Account & Auth -->
+    <string name="sign_in_title">Přihlášení</string>
+    <string name="create_account_title">Vytvořit účet</string>
+    <string name="email_label">E-mail</string>
+    <string name="password_label">Heslo</string>
+    <string name="sign_in_button">Přihlásit se</string>
+    <string name="create_account_button">Vytvořit účet</string>
+    <string name="signed_in_as">Přihlášen jako: %1$s</string>
+    <string name="sign_out_button">Odhlásit se</string>
+    <string name="auth_error_prefix">Chyba přihlášení: %1$s</string>
+    <string name="firebase_config_title">Firebase konfigurace</string>
+    <string name="firebase_project_id">Firebase ID projektu</string>
+    <string name="firebase_api_key">Firebase Web API klíč</string>
+    <string name="sync_login_required">Pro synchronizaci poznámek se nejprve přihlaste</string>
 </resources>
