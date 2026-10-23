@@ -126,7 +126,7 @@ fun MainWorkspaceScreen(
             onSignInWithGoogle = { idToken, onResult -> viewModel.signInWithGoogle(idToken, onResult) },
             onSignOut = { viewModel.signOut() },
             onSaveFirebaseConfig = { projectId, apiKey -> viewModel.setFirebaseConfig(projectId, apiKey) },
-            onSyncNow = { pass -> viewModel.syncNow(pass) },
+            onSyncNow = { pass, enabled -> viewModel.syncNow(pass, enabled) },
             onDismiss = { showSettings = false },
             onSave = { key, model, reminders, language, themeMode, defaultTime, cloudSync, pass ->
                 viewModel.saveSettings(key, model, reminders, language, themeMode, defaultTime, cloudSync, pass)

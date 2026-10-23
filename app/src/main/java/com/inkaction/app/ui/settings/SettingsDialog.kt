@@ -108,7 +108,7 @@ fun SettingsDialog(
     onSignInWithGoogle: ((String, (Boolean, String?) -> Unit) -> Unit)? = null,
     onSignOut: (() -> Unit)? = null,
     onSaveFirebaseConfig: ((String, String) -> Unit)? = null,
-    onSyncNow: ((String) -> Unit)? = null,
+    onSyncNow: ((String, Boolean) -> Unit)? = null,
     onDismiss: () -> Unit,
     onSave: (
         apiKey: String,
@@ -164,6 +164,15 @@ fun SettingsDialog(
     val googleLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
+        if (result.resultCode != android.app.Activity.RESULT_OK) {
+            isAuthLoading = false
+            authErrorMessage = if (result.resultCode == android.app.Activity.RESULT_CANCELED) {
+                "Přihlášení přes Google bylo zrušeno."
+            } else {
+                "Google přihlášení nebylo dokončeno (kód: ${result.resultCode})."
+            }
+            return@rememberLauncherForActivityResult
+        }
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
         try {
             val account = task.getResult(ApiException::class.java)
@@ -171,11 +180,20 @@ fun SettingsDialog(
             if (!idToken.isNullOrBlank()) {
                 onSignInWithGoogle?.invoke(idToken) { success, err ->
                     isAuthLoading = false
-                    if (!success) authErrorMessage = err
+                    if (!success) authErrorMessage = err ?: "Chyba přihlášení k Firebase"
                 }
             } else {
                 isAuthLoading = false
                 authErrorMessage = "Nepodařilo se získat Google token."
+            }
+        } catch (e: ApiException) {
+            isAuthLoading = false
+            authErrorMessage = when (e.statusCode) {
+                10 -> "Chyba 10 (DEVELOPER_ERROR): Zkontrolujte SHA-1 otisk v konzoli Firebase."
+                12500 -> "Chyba 12500: Chyba Google Play služeb."
+                12501 -> "Přihlášení bylo zrušeno."
+                7 -> "Chyba sítě při spojení s Googlem."
+                else -> "Chyba Google přihlášení (${e.statusCode}): ${e.localizedMessage}"
             }
         } catch (e: Exception) {
             isAuthLoading = false
@@ -396,8 +414,11 @@ fun SettingsDialog(
                                         onClick = {
                                             isAuthLoading = true
                                             authErrorMessage = null
-                                            googleSignInClient.signOut().addOnCompleteListener {
+                                            try {
                                                 googleLauncher.launch(googleSignInClient.signInIntent)
+                                            } catch (e: Exception) {
+                                                isAuthLoading = false
+                                                authErrorMessage = "Chyba spuštění přihlášení: ${e.localizedMessage}"
                                             }
                                         },
                                         enabled = !isAuthLoading,
@@ -406,18 +427,42 @@ fun SettingsDialog(
                                             .height(46.dp),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.AccountCircle,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
+                                        if (isAuthLoading) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(16.dp),
+                                                strokeWidth = 2.dp,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Default.AccountCircle,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                        }
                                         Text(
                                             text = stringResource(R.string.sign_in_with_google),
                                             style = MaterialTheme.typography.labelLarge,
                                             fontWeight = FontWeight.SemiBold
                                         )
+                                    }
+
+                                    if (authErrorMessage != null) {
+                                        Surface(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                                        ) {
+                                            Text(
+                                                text = authErrorMessage!!,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                            )
+                                        }
                                     }
 
                                     Row(
@@ -680,7 +725,7 @@ fun SettingsDialog(
                             )
 
                             Button(
-                                onClick = { onSyncNow?.invoke(syncPassphrase) },
+                                onClick = { onSyncNow?.invoke(syncPassphrase, cloudSyncEnabled) },
                                 shape = RoundedCornerShape(12.dp),
                                 enabled = syncState !is SyncState.Syncing,
                                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp)

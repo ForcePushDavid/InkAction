@@ -182,15 +182,24 @@ class InkActionViewModel(application: Application) : AndroidViewModel(applicatio
         cloudSyncManager.ensureFirebase()
     }
 
-    fun syncNow(passphrase: String? = null) {
+    fun syncNow(passphrase: String? = null, enabled: Boolean = true) {
         viewModelScope.launch {
-            val result = cloudSyncManager.syncNow(passphrase)
+            if (enabled && !settings.value.cloudSyncEnabled) {
+                settingsRepository.setCloudSyncEnabled(true)
+            }
+            if (!passphrase.isNullOrBlank()) {
+                settingsRepository.setSyncPassphrase(passphrase)
+            }
+            val result = cloudSyncManager.syncNow(passphrase, forceEnable = enabled)
             when (result) {
                 is com.inkaction.app.data.sync.SyncState.Success -> {
                     _uiEvent.send(UiEvent.ShowSnackbar(result.message.ifBlank { "Synchronizace dokončena" }))
                 }
                 is com.inkaction.app.data.sync.SyncState.Error -> {
                     _uiEvent.send(UiEvent.ShowSnackbar(result.message))
+                }
+                is com.inkaction.app.data.sync.SyncState.Disabled -> {
+                    _uiEvent.send(UiEvent.ShowSnackbar("Synchronizace je vypnuta"))
                 }
                 else -> {}
             }

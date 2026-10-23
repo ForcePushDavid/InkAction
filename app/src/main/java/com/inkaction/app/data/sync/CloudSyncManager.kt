@@ -188,10 +188,11 @@ class CloudSyncManager(
      * Performs a bidirectional zero-knowledge E2EE sync between device and Firebase.
      * When cloud sync is disabled, this function exits immediately without network access.
      */
-    suspend fun syncNow(customPassphrase: String? = null): SyncState = withContext(Dispatchers.IO) {
+    suspend fun syncNow(customPassphrase: String? = null, forceEnable: Boolean = false): SyncState = withContext(Dispatchers.IO) {
         val settings = settingsRepository.settings.value
-        if (!settings.cloudSyncEnabled) {
-            val state = SyncState.Disabled
+        val isEnabled = forceEnable || settings.cloudSyncEnabled
+        if (!isEnabled) {
+            val state = SyncState.Error("Synchronizace je vypnuta. Zapněte přepínač nahoře.")
             _syncState.value = state
             return@withContext state
         }
